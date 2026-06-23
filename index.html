@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>โปรแกรมคำนวณโครงสร้าง RC (WSD) — มยผ.1103 / EIT</title>
+<meta name="description" content="โปรแกรมคำนวณโครงสร้าง คสล. และเหล็กรูปพรรณ ตามมาตรฐาน มยผ.1103-61 / EIT (WSD/ASD) — คาน เสา พื้น ฐานราก">
+<meta name="theme-color" content="#10233f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RC Calc">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#10233f;
+  --navy-2:#1c3a63;
+  --steel:#3d6690;
+  --paper:#eee9df;
+  --paper-2:#f7f4ec;
+  --ink:#1a1a1a;
+  --rebar:#c5562a;
+  --grid:#c9c2b2;
+  --ok:#3f6e4a;
+  --bad:#a03a2c;
+  --line:#b9b2a0;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Sarabun',sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size:24px 24px;
+  background-attachment:fixed;
+  min-height:100vh;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:18px 16px 60px;}
+
+/* Title block, like a real drawing title block */
+.titleblock{
+  border:2px solid var(--navy);
+  background:var(--paper-2);
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr;
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px;
+  margin-bottom:16px;
+}
+.tb-cell{
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  padding:7px 10px;
+}
+.tb-cell:last-child{border-right:none;}
+.tb-head{grid-column:1/-1;background:var(--navy);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);}
+.tb-head h1{font-family:'IBM Plex Mono',monospace;font-size:16px;margin:0;letter-spacing:.5px;font-weight:600;}
+.tb-head span{font-size:11px;opacity:.8;}
+.tb-label{display:block;color:#7a7263;font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.tb-cell input{
+  width:100%;border:none;background:transparent;font-family:'IBM Plex Mono',monospace;
+  font-size:12px;color:var(--ink);padding:0;outline:none;border-bottom:1px dashed transparent;
+}
+.tb-cell input:focus{border-bottom:1px dashed var(--rebar);}
+
+/* tabs */
+.tabs{display:flex;gap:2px;margin-bottom:0;}
+.tab-btn{
+  flex:1;padding:12px 8px;text-align:center;background:#d9d3c2;color:var(--navy-2);
+  border:2px solid var(--navy);border-bottom:none;cursor:pointer;font-weight:600;font-size:14px;
+  font-family:'IBM Plex Mono',monospace;letter-spacing:.03em;transition:.15s;
+}
+.tab-btn .sub{display:block;font-family:'Sarabun',sans-serif;font-weight:400;font-size:11px;opacity:.75;margin-top:2px;}
+.tab-btn.active{background:var(--navy);color:#fff;}
+.tab-btn:not(.active):hover{background:#cfc8b3;}
+
+.panel{
+  border:2px solid var(--navy);background:var(--paper-2);padding:20px;
+  display:none;
+}
+.panel.active{display:block;}
+
+.grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:22px;}
+@media (max-width:880px){.grid2{grid-template-columns:1fr;}}
+
+h2.section-title{
+  font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--navy);
+  text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px;
+  border-bottom:2px solid var(--rebar);padding-bottom:6px;
+}
+.field-row{display:grid;grid-template-columns:1.4fr 1fr 56px;gap:8px;align-items:center;margin-bottom:9px;}
+.field-row label{font-size:13px;color:#3a3a3a;}
+.field-row input, .field-row select{
+  width:100%;padding:6px 8px;border:1px solid #8d8675;background:#fff;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:0;
+}
+.field-row .unit{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6b6456;}
+.field-group{margin-bottom:18px;padding-bottom:6px;}
+.field-group + .field-group{border-top:1px dashed var(--line);padding-top:14px;}
+.fg-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--steel);font-weight:600;margin-bottom:8px;font-family:'IBM Plex Mono',monospace;}
+
+.results{font-family:'IBM Plex Mono',monospace;font-size:12.5px;}
+.res-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px dotted var(--line);}
+.res-row .k{color:#4a443a;}
+.res-row .v{font-weight:600;}
+.res-block{margin-bottom:14px;}
+.res-block-title{font-size:11px;text-transform:uppercase;color:var(--navy);font-weight:700;letter-spacing:.05em;margin-bottom:6px;padding:4px 8px;background:#dfd9c8;}
+.status{display:inline-block;padding:2px 8px;font-size:11px;font-weight:700;letter-spacing:.04em;}
+.status.pass{background:#dcebe0;color:var(--ok);}
+.status.fail{background:#f3dcd6;color:var(--bad);}
+.formula{font-size:11px;color:#5a5142;background:#fff;border:1px solid var(--line);padding:6px 8px;margin:4px 0 10px;font-family:'IBM Plex Mono',monospace;}
+
+.btnbar{display:flex;gap:10px;margin-top:16px;}
+button.act{
+  font-family:'IBM Plex Mono',monospace;background:var(--navy);color:#fff;border:none;
+  padding:10px 18px;font-size:13px;letter-spacing:.04em;cursor:pointer;font-weight:600;
+}
+button.act:hover{background:var(--navy-2);}
+button.act.alt{background:var(--rebar);}
+button.act.alt:hover{background:#a8481f;}
+
+.note{font-size:11px;color:#73695a;margin-top:10px;line-height:1.5;}
+.warn-banner{
+  background:#f6e9d8;border-left:4px solid var(--rebar);padding:8px 12px;font-size:12px;
+  margin-bottom:14px;color:#5a3a1f;
+}
+
+.chainbox{border:2px solid var(--rebar);background:#fbf3e8;margin-bottom:16px;}
+.chain-head{display:flex;justify-content:space-between;align-items:center;background:var(--rebar);color:#fff;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.03em;}
+.chain-toggle{background:transparent;border:1px solid #fff;color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:3px 9px;cursor:pointer;}
+.chain-toggle:hover{background:rgba(255,255,255,.15);}
+.chain-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:16px;}
+@media (max-width:880px){.chain-grid{grid-template-columns:1fr;}}
+.chain-card{background:#fff;border:1px solid var(--line);padding:12px;}
+.chain-link-row{display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap;}
+button.pullbtn{
+  font-family:'IBM Plex Mono',monospace;background:var(--steel);color:#fff;border:none;
+  padding:6px 10px;font-size:11px;cursor:pointer;font-weight:600;white-space:nowrap;
+}
+button.pullbtn:hover{background:var(--navy-2);}
+button.pullbtn:disabled{background:#aaa;cursor:not-allowed;}
+.chain-val{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--navy);background:#eef3f6;padding:5px 8px;border-left:3px solid var(--steel);margin:6px 0;}
+
+/* Print sheet */
+#printSheet{display:none;}
+@media print{
+  body{background:#fff;}
+  .wrap > *:not(#printSheet){display:none !important;}
+  #printSheet{display:block !important;}
+}
+.ps-page{
+  background:#fff;border:1px solid #000;padding:0;font-family:'IBM Plex Mono',monospace;font-size:12px;
+  margin-bottom:24px;
+}
+.ps-titleblock{display:grid;grid-template-columns:2fr 1fr 1fr;border-bottom:2px solid #000;}
+.ps-tb-cell{border-right:1px solid #000;padding:8px 12px;}
+.ps-tb-cell:last-child{border-right:none;}
+.ps-tb-cell .l{font-size:9px;text-transform:uppercase;color:#555;}
+.ps-tb-cell .v{font-size:13px;font-weight:700;}
+.ps-body{padding:16px 20px;}
+.ps-h{font-size:13px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #000;margin:14px 0 8px;padding-bottom:4px;}
+.ps-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted #aaa;}
+.ps-formula{font-size:11px;color:#444;margin:3px 0 8px;}
+.ps-foot{display:flex;justify-content:space-between;padding:14px 20px;border-top:2px solid #000;font-size:10px;}
+
+@media (max-width:600px){
+  .field-row{grid-template-columns:1fr;}
+  .field-row .unit{display:none;}
+  .titleblock{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="titleblock">
+    <div class="tb-head">
+      <h1>RC STRUCTURE CALCULATOR — WSD</h1>
+      <span>มยผ.1103-61 / EIT Standard · Working Stress Design <button id="installBtn" onclick="installApp()" style="display:none;margin-left:10px;background:var(--rebar);color:#fff;border:none;padding:4px 10px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">⬇ ติดตั้งแอป</button></span>
+    </div>
+    <div class="tb-cell"><span class="tb-label">ชื่อโครงการ / Project</span><input id="projName" value="-" /></div>
+    <div class="tb-cell"><span class="tb-label">คำนวณโดย / Engineer</span><input id="projEng" value="-" /></div>
+    <div class="tb-cell"><span class="tb-label">ตรวจสอบโดย / Checked</span><input id="projChk" value="-" /></div>
+    <div class="tb-cell"><span class="tb-label">วันที่ / Date</span><input id="projDate" type="date" /></div>
+  </div>
+
+  <div class="warn-banner">
+    ผลลัพธ์จากโปรแกรมนี้ใช้สำหรับการคำนวณขั้นต้น (preliminary) เท่านั้น การออกแบบจริงต้องตรวจสอบและลงนามรับรองโดยวิศวกรผู้ได้รับใบอนุญาตประกอบวิชาชีพวิศวกรรมควบคุม (กว.) ตามกฎหมายไทย
+  </div>
+
+  <!-- ============ ROOF LOAD + LOAD PATH ============ -->
+  <div class="chainbox">
+    <div class="chain-head">
+      <span>🏗 LOAD PATH — โหลดหลังคา → พื้น → คาน → เสา → ฐานราก</span>
+      <button class="chain-toggle" onclick="toggleChain()" id="chainToggleBtn">ซ่อน ▲</button>
+    </div>
+    <div id="chainBody">
+      <div class="chain-grid">
+        <div class="chain-card">
+          <div class="fg-title">น้ำหนักหลังคา (Roof Load Input)</div>
+          <div class="field-row"><label>น้ำหนักคงที่หลังคา DL</label><input id="r_DL" type="number" value="60"><span class="unit">kg/m²</span></div>
+          <div class="field-row"><label>น้ำหนักจรหลังคา LL</label><input id="r_LL" type="number" value="60"><span class="unit">kg/m²</span></div>
+          <div class="field-row"><label>ความกว้างพื้นที่รับน้ำหนัก (สำหรับใช้กับคานโดยตรง)</label><input id="r_trib" type="number" value="3.0"><span class="unit">m</span></div>
+          <button class="act" style="margin-top:4px;" onclick="updateRoofChain()">บันทึกโหลดหลังคา</button>
+        </div>
+        <div class="chain-card">
+          <div class="fg-title">สถานะ Load Path ปัจจุบัน</div>
+          <div id="chainStatus" class="results" style="font-size:11.5px;">
+            <p class="note">ยังไม่มีข้อมูล — กรอกโหลดหลังคา แล้วกด "บันทึกโหลดหลังคา" จากนั้นกดคำนวณในแต่ละหมวดงานตามลำดับ พื้น → คาน → เสา → ฐานราก เพื่อส่งต่อโหลดอัตโนมัติ</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="beam">BEAM<span class="sub">คาน</span></button>
+    <button class="tab-btn" data-tab="column">COLUMN<span class="sub">เสา</span></button>
+    <button class="tab-btn" data-tab="slab">SLAB<span class="sub">พื้น</span></button>
+    <button class="tab-btn" data-tab="footing">FOOTING<span class="sub">ฐานราก</span></button>
+    <button class="tab-btn" data-tab="bom">SUMMARY<span class="sub">สรุปรายการ</span></button>
+  </div>
+
+  <!-- ============ BEAM ============ -->
+  <div class="panel active" id="panel-beam">
+    <div class="grid2">
+      <div>
+        <h2 class="section-title">ข้อมูลนำเข้า — คาน (Beam Input)</h2>
+
+        <div class="field-group">
+          <div class="fg-title">ระบุองค์ประกอบ / Element ID</div>
+          <div class="field-row"><label>หมายเลขคาน (เช่น B1, B2, ...)</label><input id="b_id" type="text" value="B1" placeholder="B1"><span class="unit"></span></div>
+          <div class="field-row"><label>คำอธิบาย (ตัวเลือก)</label><input id="b_desc" type="text" placeholder="คาน 1 ชั้น 2" style="border-color:#ccc;"><span class="unit"></span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">ประเภทวัสดุ / Material Type</div>
+          <div class="field-row"><label>เลือกวัสดุคาน</label>
+            <select id="b_matType" onchange="setMaterial('b')">
+              <option value="rc" selected>คอนกรีตเสริมเหล็ก (RC)</option>
+              <option value="steel">เหล็กรูปพรรณ (Structural Steel)</option>
+            </select><span class="unit"></span></div>
+        </div>
+
+        <div class="field-group mat-rc-b">
+          <div class="fg-title">วัสดุ / Material (RC)</div>
+          <div class="field-row"><label>กำลังอัดคอนกรีต fc'</label><select id="b_fc"><option value="180">180</option><option value="210" selected>210</option><option value="240">240</option><option value="280">280</option></select><span class="unit">ksc</span></div>
+          <div class="field-row"><label>เหล็กเสริม (ชั้นคุณภาพ)</label>
+            <select id="b_steel">
+              <option value="2400|1200">SR24 (fy=2400)</option>
+              <option value="4000|1700" selected>SD40 (fy=4000)</option>
+              <option value="5000|2000">SD50 (fy=5000)</option>
+            </select><span class="unit">ksc</span></div>
+        </div>
+
+        <div class="field-group mat-rc-b">
+          <div class="fg-title">หน้าตัด / Section (RC)</div>
+          <div class="field-row"><label>ความกว้าง b</label><input id="b_b" type="number" value="20"><span class="unit">cm</span></div>
+          <div class="field-row"><label>ความสูง h</label><input id="b_h" type="number" value="40"><span class="unit">cm</span></div>
+          <div class="field-row"><label>ระยะหุ้มถึงศูนย์เหล็ก d'</label><input id="b_cover" type="number" value="5"><span class="unit">cm</span></div>
+        </div>
+
+        <div class="field-group mat-steel-b" style="display:none;">
+          <div class="fg-title">เหล็กรูปพรรณ / Steel Section</div>
+          <div class="field-row"><label>ชั้นคุณภาพเหล็ก (Fy)</label>
+            <select id="b_steelGrade">
+              <option value="2450" selected>SS400 / A36 (Fy=2450)</option>
+              <option value="3200">SM490 (Fy=3200)</option>
+              <option value="2400">SS400 (Fy=2400)</option>
+            </select><span class="unit">ksc</span></div>
+          <div class="field-row"><label>รูปแบบหน้าตัด</label>
+            <select id="b_secType" onchange="toggleSteelDims('b')">
+              <option value="wf" selected>Wide Flange / H / I-Beam</option>
+              <option value="box">เหล็กกล่อง (Box / RHS / SHS)</option>
+              <option value="pipe">เหล็กกลม (Pipe / CHS)</option>
+            </select><span class="unit"></span></div>
+          <div class="b-dims-wf">
+            <div class="field-row"><label>ความลึก d</label><input id="b_d_wf" type="number" value="30"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความกว้างปีก bf</label><input id="b_bf_wf" type="number" value="15"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาปีก tf</label><input id="b_tf_wf" type="number" value="1.0"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาเอว tw</label><input id="b_tw_wf" type="number" value="0.65"><span class="unit">cm</span></div>
+          </div>
+          <div class="b-dims-box" style="display:none;">
+            <div class="field-row"><label>ความสูง H</label><input id="b_H_box" type="number" value="20"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความกว้าง B</label><input id="b_B_box" type="number" value="10"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาผนัง t</label><input id="b_t_box" type="number" value="0.6"><span class="unit">cm</span></div>
+          </div>
+          <div class="b-dims-pipe" style="display:none;">
+            <div class="field-row"><label>เส้นผ่านศูนย์กลางนอก D</label><input id="b_D_pipe" type="number" value="20"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาผนัง t</label><input id="b_t_pipe" type="number" value="0.6"><span class="unit">cm</span></div>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">เชื่อมโหลดจากหมวดงานอื่น / Load Link</div>
+          <div class="chain-link-row">
+            <button class="pullbtn" onclick="pullToBeam('slab')">⬇ ดึงจากพื้น (Slab)</button>
+            <button class="pullbtn" onclick="pullToBeam('roof')">⬇ ดึงจากหลังคาโดยตรง (Roof)</button>
+          </div>
+          <div id="beamLinkInfo" class="chain-val" style="display:none;"></div>
+          <div class="field-row"><label>ช่วงพาดคาน L (ใช้คำนวณ M,V จากโหลดที่ดึงมา)</label><input id="b_L" type="number" value="4.0"><span class="unit">m</span></div>
+          <div class="field-row"><label>เงื่อนไขรองรับ</label><select id="b_support"><option value="simple">Simple</option><option value="continuous">Continuous</option></select><span class="unit"></span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">คำนวณโมเมนต์อัตโนมัติ / Auto Moment (กรอกโหลด → คำนวณ M,V ให้)</div>
+          <div class="field-row"><label>น้ำหนักแผ่กระจาย w (UDL)</label><input id="b_w" type="number" value="2.0"><span class="unit">t/m</span></div>
+          <div class="field-row"><label>น้ำหนักจุดกึ่งกลาง P (ตัวเลือก)</label><input id="b_P" type="number" value="0"><span class="unit">ton</span></div>
+          <button class="pullbtn" style="background:var(--rebar);" onclick="autoMomentBeam()">⚡ คำนวณ M, V อัตโนมัติ</button>
+          <div id="beamAutoInfo" class="chain-val" style="display:none;"></div>
+          <p class="note" style="margin-top:6px;">Simple: M=wL²/8 + PL/4, V=wL/2 + P/2 &nbsp;|&nbsp; Continuous: M=wL²/10, V=0.6wL</p>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">น้ำหนัก / Loads (Service load, ไม่คูณ factor) — กรอกเอง หรือกดปุ่มด้านบนเพื่อคำนวณให้</div>
+          <div class="field-row"><label>โมเมนต์ดัด Mu</label><input id="b_M" type="number" value="2.5"><span class="unit">t·m</span></div>
+          <div class="field-row"><label>แรงเฉือน Vu</label><input id="b_V" type="number" value="4.0"><span class="unit">ton</span></div>
+        </div>
+
+        <div class="field-group mat-rc-b">
+          <div class="fg-title">เหล็กเสริมหลัก (Main Reinforcement)</div>
+          <div class="field-row"><label>ขนาดเหล็กเมน</label>
+            <select id="b_barSize">
+              <option value="DB10">DB10</option><option value="DB12">DB12</option>
+              <option value="DB16" selected>DB16</option><option value="DB20">DB20</option>
+              <option value="DB25">DB25</option><option value="DB28">DB28</option><option value="DB32">DB32</option>
+            </select><span class="unit">เส้นผ่านศูนย์กลาง</span></div>
+          <div class="field-row"><label>จำนวนเส้น (ที่ใช้จริง)</label><input id="b_barCount" type="number" value="3" min="1" step="1"><span class="unit">เส้น</span></div>
+        </div>
+
+        <div class="field-group mat-rc-b">
+          <div class="fg-title">เหล็กปลอก / Stirrups</div>
+          <div class="field-row"><label>ขนาดเหล็กปลอก</label><select id="b_stirDia"><option value="0.28">RB6</option><option value="0.50" selected>RB9</option></select><span class="unit">cm²(1ขา)</span></div>
+        </div>
+
+        <div class="btnbar">
+          <button class="act" onclick="calcBeam()">คำนวณ / CALCULATE</button>
+          <button class="act alt" onclick="printSheetFor('beam')">พิมพ์เอกสารคำนวณ</button>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="section-title">ผลลัพธ์ — คาน (Results)</h2>
+        <div id="beamResults" class="results"><p class="note">กดคำนวณเพื่อแสดงผล</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ COLUMN ============ -->
+  <div class="panel" id="panel-column">
+    <div class="grid2">
+      <div>
+        <h2 class="section-title">ข้อมูลนำเข้า — เสา (Column Input)</h2>
+
+        <div class="field-group">
+          <div class="fg-title">ระบุองค์ประกอบ / Element ID</div>
+          <div class="field-row"><label>หมายเลขเสา (เช่น C1, C2, ...)</label><input id="c_id" type="text" value="C1" placeholder="C1"><span class="unit"></span></div>
+          <div class="field-row"><label>คำอธิบาย (ตัวเลือก)</label><input id="c_desc" type="text" placeholder="เสา 1 ชั้น 2" style="border-color:#ccc;"><span class="unit"></span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">ประเภทวัสดุ / Material Type</div>
+          <div class="field-row"><label>เลือกวัสดุเสา</label>
+            <select id="c_matType" onchange="setMaterial('c')">
+              <option value="rc" selected>คอนกรีตเสริมเหล็ก (RC)</option>
+              <option value="steel">เหล็กรูปพรรณ (Structural Steel)</option>
+            </select><span class="unit"></span></div>
+        </div>
+
+        <div class="field-group mat-rc-c">
+          <div class="fg-title">วัสดุ / Material (RC)</div>
+          <div class="field-row"><label>กำลังอัดคอนกรีต fc'</label><select id="c_fc"><option value="180">180</option><option value="210" selected>210</option><option value="240">240</option><option value="280">280</option></select><span class="unit">ksc</span></div>
+          <div class="field-row"><label>เหล็กเสริม (ชั้นคุณภาพ)</label>
+            <select id="c_steel">
+              <option value="2400">SR24 (fy=2400)</option>
+              <option value="4000" selected>SD40 (fy=4000)</option>
+              <option value="5000">SD50 (fy=5000)</option>
+            </select><span class="unit">ksc</span></div>
+        </div>
+
+        <div class="field-group mat-rc-c">
+          <div class="fg-title">หน้าตัด / Section (rectangular tied column)</div>
+          <div class="field-row"><label>ความกว้าง b</label><input id="c_b" type="number" value="30"><span class="unit">cm</span></div>
+          <div class="field-row"><label>ความหนา h</label><input id="c_h" type="number" value="30"><span class="unit">cm</span></div>
+        </div>
+
+        <div class="field-group mat-steel-c" style="display:none;">
+          <div class="fg-title">เหล็กรูปพรรณ / Steel Section</div>
+          <div class="field-row"><label>ชั้นคุณภาพเหล็ก (Fy)</label>
+            <select id="c_steelGrade">
+              <option value="2450" selected>SS400 / A36 (Fy=2450)</option>
+              <option value="3200">SM490 (Fy=3200)</option>
+              <option value="2400">SS400 (Fy=2400)</option>
+            </select><span class="unit">ksc</span></div>
+          <div class="field-row"><label>ความยาวเสา (สำหรับ slenderness) L</label><input id="c_len" type="number" value="3.0"><span class="unit">m</span></div>
+          <div class="field-row"><label>ค่า K (effective length factor)</label><input id="c_K" type="number" value="1.0" step="0.1"><span class="unit"></span></div>
+          <div class="field-row"><label>รูปแบบหน้าตัด</label>
+            <select id="c_secType" onchange="toggleSteelDims('c')">
+              <option value="wf" selected>Wide Flange / H / I-Beam</option>
+              <option value="box">เหล็กกล่อง (Box / RHS / SHS)</option>
+              <option value="pipe">เหล็กกลม (Pipe / CHS)</option>
+            </select><span class="unit"></span></div>
+          <div class="c-dims-wf">
+            <div class="field-row"><label>ความลึก d</label><input id="c_d_wf" type="number" value="20"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความกว้างปีก bf</label><input id="c_bf_wf" type="number" value="20"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาปีก tf</label><input id="c_tf_wf" type="number" value="1.0"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาเอว tw</label><input id="c_tw_wf" type="number" value="0.7"><span class="unit">cm</span></div>
+          </div>
+          <div class="c-dims-box" style="display:none;">
+            <div class="field-row"><label>ความสูง H</label><input id="c_H_box" type="number" value="15"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความกว้าง B</label><input id="c_B_box" type="number" value="15"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาผนัง t</label><input id="c_t_box" type="number" value="0.6"><span class="unit">cm</span></div>
+          </div>
+          <div class="c-dims-pipe" style="display:none;">
+            <div class="field-row"><label>เส้นผ่านศูนย์กลางนอก D</label><input id="c_D_pipe" type="number" value="20"><span class="unit">cm</span></div>
+            <div class="field-row"><label>ความหนาผนัง t</label><input id="c_t_pipe" type="number" value="0.6"><span class="unit">cm</span></div>
+          </div>
+        </div>
+
+        <div class="field-group mat-rc-c">
+          <div class="fg-title">เหล็กเสริมหลัก (Main Reinforcement, ตลอดเสา)</div>
+          <div class="field-row"><label>ขนาดเหล็กเมน</label>
+            <select id="c_barSize">
+              <option value="DB12">DB12</option><option value="DB16" selected>DB16</option>
+              <option value="DB20">DB20</option><option value="DB25">DB25</option><option value="DB28">DB28</option><option value="DB32">DB32</option>
+            </select><span class="unit">เส้นผ่านศูนย์กลาง</span></div>
+          <div class="field-row"><label>จำนวนเส้น (รวมทุกด้าน)</label><input id="c_barCount" type="number" value="8" min="4" step="1"><span class="unit">เส้น</span></div>
+          <div class="field-row"><label>Ast ที่คำนวณได้ (auto)</label><input id="c_Ast" type="number" value="16.08" readonly style="background:#eee;"><span class="unit">cm²</span></div>
+        </div>
+
+        <div class="field-group mat-rc-c">
+          <div class="fg-title">เหล็กปลอก (Ties)</div>
+          <div class="field-row"><label>ขนาดเหล็กปลอก</label>
+            <select id="c_tieSize">
+              <option value="RB6">RB6</option><option value="RB9" selected>RB9</option>
+            </select><span class="unit">ขนาด 2 ขา</span></div>
+          <div class="field-row"><label>ระยะเรียง</label><input id="c_tieSpacing" type="number" value="15"><span class="unit">cm (≤ 1/2 dimension)</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">เชื่อมโหลดจากหมวดงานอื่น / Load Link</div>
+          <div class="chain-link-row">
+            <button class="pullbtn" onclick="pullToColumn()">⬇ ดึงแรงตามแนวแกนจากคาน (Beam)</button>
+          </div>
+          <div id="columnLinkInfo" class="chain-val" style="display:none;"></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">น้ำหนัก / Loads (Service)</div>
+          <div class="field-row"><label>แรงตามแนวแกน P</label><input id="c_P" type="number" value="50"><span class="unit">ton</span></div>
+          <div class="field-row"><label>โมเมนต์ดัด M (uniaxial)</label><input id="c_M" type="number" value="3.0"><span class="unit">t·m</span></div>
+        </div>
+
+        <div class="btnbar">
+          <button class="act" onclick="calcColumn()">คำนวณ / CALCULATE</button>
+          <button class="act alt" onclick="printSheetFor('column')">พิมพ์เอกสารคำนวณ</button>
+        </div>
+        <p class="note">หมายเหตุ: การคำนวณเสารับแรงตามแนวแกน+โมเมนต์ ในที่นี้ใช้วิธีประมาณ (transformed gross section, uncracked) เพื่อตรวจสอบขั้นต้น สำหรับเสาที่มี slenderness สูงหรือ biaxial bending ต้องตรวจสอบด้วย interaction diagram โดยวิศวกรผู้เชี่ยวชาญ</p>
+      </div>
+
+      <div>
+        <h2 class="section-title">ผลลัพธ์ — เสา (Results)</h2>
+        <div id="columnResults" class="results"><p class="note">กดคำนวณเพื่อแสดงผล</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SLAB ============ -->
+  <div class="panel" id="panel-slab">
+    <div class="grid2">
+      <div>
+        <h2 class="section-title">ข้อมูลนำเข้า — พื้น (One-way Slab Input)</h2>
+
+        <div class="field-group">
+          <div class="fg-title">ระบุองค์ประกอบ / Element ID</div>
+          <div class="field-row"><label>หมายเลขพื้น (เช่น S1, S2, ...)</label><input id="s_id" type="text" value="S1" placeholder="S1"><span class="unit"></span></div>
+          <div class="field-row"><label>คำอธิบาย (ตัวเลือก)</label><input id="s_desc" type="text" placeholder="พื้น ชั้น 2" style="border-color:#ccc;"><span class="unit"></span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">วัสดุ / Material</div>
+          <div class="field-row"><label>กำลังอัดคอนกรีต fc'</label><select id="s_fc"><option value="180">180</option><option value="210" selected>210</option><option value="240">240</option></select><span class="unit">ksc</span></div>
+          <div class="field-row"><label>เหล็กเสริม (ชั้นคุณภาพ)</label>
+            <select id="s_steel">
+              <option value="2400|1200">SR24 (fy=2400)</option>
+              <option value="4000|1700" selected>SD40 (fy=4000)</option>
+            </select><span class="unit">ksc</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">หน้าตัด / Geometry (ต่อความกว้าง 1.00 m)</div>
+          <div class="field-row"><label>ความหนาพื้น t</label><input id="s_t" type="number" value="12"><span class="unit">cm</span></div>
+          <div class="field-row"><label>ระยะหุ้มถึงศูนย์เหล็ก d'</label><input id="s_cover" type="number" value="2.5"><span class="unit">cm</span></div>
+          <div class="field-row"><label>ช่วงพาด L (simple span)</label><input id="s_L" type="number" value="3.0"><span class="unit">m</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">เหล็กเสริมหลัก (Main Reinforcement, ต่อความกว้าง 1.00 m)</div>
+          <div class="field-row"><label>ขนาดเหล็กเมน</label>
+            <select id="s_barSize">
+              <option value="DB10" selected>DB10</option><option value="DB12">DB12</option><option value="DB16">DB16</option>
+            </select><span class="unit">เส้นผ่านศูนย์กลาง</span></div>
+          <div class="field-row"><label>ระยะเรียง (spacing)</label><input id="s_barSpacing" type="number" value="15"><span class="unit">cm</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">เชื่อมโหลดจากหมวดงานอื่น / Load Link</div>
+          <div class="chain-link-row">
+            <button class="pullbtn" onclick="pullToSlab()">⬇ รวมน้ำหนักหลังคาเข้า SDL (Roof)</button>
+          </div>
+          <div id="slabLinkInfo" class="chain-val" style="display:none;"></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">น้ำหนัก / Loads (Service, ต่อ ตร.ม.)</div>
+          <div class="field-row"><label>น้ำหนักใช้สอย LL</label><input id="s_LL" type="number" value="300"><span class="unit">kg/m²</span></div>
+          <div class="field-row"><label>น้ำหนักคงที่เพิ่ม SDL</label><input id="s_SDL" type="number" value="100"><span class="unit">kg/m²</span></div>
+          <div class="field-row"><label>เงื่อนไขรองรับ</label>
+            <select id="s_support"><option value="simple">รับแรงทางเดียว (Simple)</option><option value="continuous">ต่อเนื่อง (Continuous)</option></select><span class="unit"></span></div>
+        </div>
+
+        <div class="btnbar">
+          <button class="act" onclick="calcSlab()">คำนวณ / CALCULATE</button>
+          <button class="act alt" onclick="printSheetFor('slab')">พิมพ์เอกสารคำนวณ</button>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="section-title">ผลลัพธ์ — พื้น (Results)</h2>
+        <div id="slabResults" class="results"><p class="note">กดคำนวณเพื่อแสดงผล</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ FOOTING ============ -->
+  <div class="panel" id="panel-footing">
+    <div class="grid2">
+      <div>
+        <h2 class="section-title">ข้อมูลนำเข้า — ฐานราก (Isolated Footing Input)</h2>
+
+        <div class="field-group">
+          <div class="fg-title">ระบุองค์ประกอบ / Element ID</div>
+          <div class="field-row"><label>หมายเลขฐานราก (เช่น F1, F2, ...)</label><input id="f_id" type="text" value="F1" placeholder="F1"><span class="unit"></span></div>
+          <div class="field-row"><label>คำอธิบาย (ตัวเลือก)</label><input id="f_desc" type="text" placeholder="ฐานราก เสา C1" style="border-color:#ccc;"><span class="unit"></span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">วัสดุ / Material</div>
+          <div class="field-row"><label>กำลังอัดคอนกรีต fc'</label><select id="f_fc"><option value="180">180</option><option value="210" selected>210</option><option value="240">240</option></select><span class="unit">ksc</span></div>
+          <div class="field-row"><label>เหล็กเสริม (ชั้นคุณภาพ)</label>
+            <select id="f_steel">
+              <option value="2400|1200">SR24 (fy=2400)</option>
+              <option value="4000|1700" selected>SD40 (fy=4000)</option>
+            </select><span class="unit">ksc</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">ขนาดฐานราก & เสา / Geometry</div>
+          <div class="field-row"><label>ความยาวฐาน B</label><input id="f_B" type="number" value="2.0"><span class="unit">m</span></div>
+          <div class="field-row"><label>ความกว้างฐาน L</label><input id="f_L" type="number" value="2.0"><span class="unit">m</span></div>
+          <div class="field-row"><label>ความหนาฐาน t</label><input id="f_t" type="number" value="50"><span class="unit">cm</span></div>
+          <div class="field-row"><label>ขนาดเสา (เหลี่ยม) c</label><input id="f_col" type="number" value="30"><span class="unit">cm</span></div>
+          <div class="field-row"><label>ระยะหุ้มถึงศูนย์เหล็ก d'</label><input id="f_cover" type="number" value="7.5"><span class="unit">cm</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">เหล็กเสริมหลัก (Main Reinforcement, ทั้งสองทาง)</div>
+          <div class="field-row"><label>ขนาดเหล็กเมน</label>
+            <select id="f_barSize">
+              <option value="DB12">DB12</option><option value="DB16" selected>DB16</option><option value="DB20">DB20</option>
+            </select><span class="unit">เส้นผ่านศูนย์กลาง</span></div>
+          <div class="field-row"><label>ระยะเรียง (spacing)</label><input id="f_barSpacing" type="number" value="15"><span class="unit">cm</span></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">เชื่อมโหลดจากหมวดงานอื่น / Load Link</div>
+          <div class="chain-link-row">
+            <button class="pullbtn" onclick="pullToFooting()">⬇ ดึงแรงตามแนวแกนจากเสา (Column)</button>
+          </div>
+          <div id="footingLinkInfo" class="chain-val" style="display:none;"></div>
+        </div>
+
+        <div class="field-group">
+          <div class="fg-title">น้ำหนัก / Loads & Soil</div>
+          <div class="field-row"><label>แรงตามแนวแกนจากเสา P (service)</label><input id="f_P" type="number" value="60"><span class="unit">ton</span></div>
+          <div class="field-row"><label>กำลังรับน้ำหนักดินที่ยอมให้ qa</label><input id="f_qa" type="number" value="15"><span class="unit">t/m²</span></div>
+        </div>
+
+        <div class="btnbar">
+          <button class="act" onclick="calcFooting()">คำนวณ / CALCULATE</button>
+          <button class="act alt" onclick="printSheetFor('footing')">พิมพ์เอกสารคำนวณ</button>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="section-title">ผลลัพธ์ — ฐานราก (Results)</h2>
+        <div id="footingResults" class="results"><p class="note">กดคำนวณเพื่อแสดงผล</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ BOM / SUMMARY ============ -->
+  <div class="panel" id="panel-bom">
+    <h2 class="section-title">สรุปรายการเหล็กเสริม (Bill of Materials — BOM)</h2>
+    <div id="bomContent" class="results">
+      <p class="note">ยังไม่มีการคำนวณ — กรุณากำหนดหมายเลขและคำนวณแต่ละหมวดงานเพื่อให้ปรากฏในรายการสรุปนี้</p>
+    </div>
+    <div class="btnbar" style="margin-top:20px;">
+      <button class="act" onclick="exportBOM()">📥 ส่งออก BOM (Text)</button>
+      <button class="act alt" onclick="printBOM()">🖨️ พิมพ์ BOM</button>
+      <button class="act" onclick="clearBOM()" style="background:#999;">🗑️ ล้างข้อมูล</button>
+    </div>
+  </div>
+
+  <div id="printSheet"></div>
+</div>
+
+<script>
+/* ================= Tabs ================= */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+/* ================= Shared helpers ================= */
+const Es = 2000000; // ksc
+function Ec(fc){ return 15100*Math.sqrt(fc); } // ksc, ACI empirical (kg/cm^2 units approx)
+function n_ratio(fc){ return Es/Ec(fc); }
+function fmt(x,d=2){ if(x===undefined||x===null||isNaN(x)) return '-'; return Number(x).toFixed(d); }
+function statusTag(pass){ return pass? '<span class="status pass">PASS / ผ่าน</span>' : '<span class="status fail">FAIL / ไม่ผ่าน</span>'; }
+
+// Validate effective depth d = section - cover. Returns error string (Thai) or null if OK.
+function validateDepth(sectionDim, cover, label){
+  if(isNaN(sectionDim) || isNaN(cover)) return `กรุณากรอกค่า${label}และระยะหุ้มให้ครบ`;
+  const d = sectionDim - cover;
+  if(d <= 0) return `ความลึกประสิทธิผล d = ${label}(${sectionDim}) − cover(${cover}) = ${d.toFixed(1)} cm ซึ่งติดลบหรือเป็นศูนย์ — ตรวจสอบหน่วย (ความหนาต้องเป็น "ซม." ไม่ใช่ "เมตร") หรือระยะหุ้มมากเกินไป`;
+  if(d < 5) return `⚠ ความลึกประสิทธิผล d = ${d.toFixed(1)} cm น้อยผิดปกติ — โปรดตรวจสอบหน่วยของความหนาและระยะหุ้ม (ควรเป็นซม.)`;
+  return null;
+}
+
+let lastResult = {}; // store latest calc per element for printing
+
+/* ================= Rebar table (deformed bars, DB) ================= */
+const REBAR = { // diameter(mm): area cm^2
+  'DB10':0.785,'DB12':1.131,'DB16':2.011,'DB20':3.142,'DB25':4.909,'DB28':6.158,'DB32':8.042
+};
+function rebarArea(name){ return REBAR[name]||0; }
+function suggestBarCount(As_needed, barName){
+  const a = rebarArea(barName);
+  if(a<=0) return 0;
+  return Math.ceil(As_needed/a);
+}
+
+
+/* ================= BOM DATABASE ================= */
+let bom = { beams:[], columns:[], slabs:[], footings:[] };
+
+function upsert(arr, entry){
+  const idx = arr.findIndex(x => x.id === entry.id);
+  if(idx>=0) arr[idx] = entry; else arr.push(entry);
+}
+
+function addToBeamBOM(r){
+  if(r.matType==='steel'){
+    upsert(bom.beams, {
+      id: document.getElementById('b_id').value || 'B?',
+      desc: document.getElementById('b_desc').value || '',
+      mat:'steel', secType:r.secType, dims:r.dims, label:r.label,
+      A:r.A, S:r.S, Fy:r.Fy,
+      L:parseFloat(document.getElementById('b_L').value)||0,
+      M:r.M_tm, V:r.V_t,
+      status: r.bendOK && r.shearOK ? 'OK' : 'NG'
+    });
+    renderBOM(); return;
+  }
+  upsert(bom.beams, {
+    id: document.getElementById('b_id').value || 'B?',
+    desc: document.getElementById('b_desc').value || '',
+    mat:'rc',
+    barSize:r.barSize, barCount:r.barCount, As_provided:r.As_provided,
+    stirSize:(document.getElementById('b_stirDia').selectedOptions[0]||{}).text || 'RB9',
+    stirSpacing:r.stirrupSpacing,
+    L:parseFloat(document.getElementById('b_L').value)||0,
+    b:r.b, h:r.h, M:r.M_tm, V:r.V_kg/1000,
+    status: r.barSteelOK && !r.overReinforced ? 'OK' : 'NG'
+  });
+  renderBOM();
+}
+function addToColumnBOM(r){
+  if(r.matType==='steel'){
+    upsert(bom.columns, {
+      id: document.getElementById('c_id').value || 'C?',
+      desc: document.getElementById('c_desc').value || '',
+      mat:'steel', secType:r.secType, dims:r.dims, label:r.label,
+      A:r.A, Fy:r.Fy, P:r.P_t, M:r.M_tm,
+      status: r.ok ? 'OK' : 'NG'
+    });
+    renderBOM(); return;
+  }
+  upsert(bom.columns, {
+    id: document.getElementById('c_id').value || 'C?',
+    desc: document.getElementById('c_desc').value || '',
+    mat:'rc',
+    barSize:r.barSize, barCount:r.barCount, Ast:r.Ast,
+    tieSize: document.getElementById('c_tieSize').value || 'RB9',
+    tieSpacing: parseFloat(document.getElementById('c_tieSpacing').value)||15,
+    b:r.b, h:r.h, P:r.P_t, M:r.M_tm,
+    status: r.stressOK ? 'OK' : 'NG'
+  });
+  renderBOM();
+}
+function addToSlabBOM(r){
+  upsert(bom.slabs, {
+    id: document.getElementById('s_id').value || 'S?',
+    desc: document.getElementById('s_desc').value || '',
+    barSize:r.barSize, barSpacing:r.barSpacing, As_provided:r.As_provided,
+    t:r.t, L:r.L, support:r.support,
+    status: r.barSteelOK && r.shearOK && r.deflOK ? 'OK' : 'NG'
+  });
+  renderBOM();
+}
+function addToFootingBOM(r){
+  upsert(bom.footings, {
+    id: document.getElementById('f_id').value || 'F?',
+    desc: document.getElementById('f_desc').value || '',
+    barSize:r.barSize, barSpacing:r.barSpacing, As_provided:r.As_provided,
+    B:r.B, L:r.L, t:r.t, P:r.P_total, q:r.q_actual,
+    status: (r.bearingOK && r.onewayOK && r.twowayOK) ? 'OK' : 'NG'
+  });
+  renderBOM();
+}
+
+/* ================= CROSS-SECTION DRAWINGS (SVG) ================= */
+// RC rectangular section with rebar dots + stirrup outline
+function drawRCSection(b, h, barCount, barLabel, tieLabel){
+  const W=110, H=130, pad=18;
+  const sw = W-2*pad, sh = H-2*pad-12;
+  const x0=pad, y0=pad;
+  // distribute bars: corners first, then split top/bottom
+  const n = Math.max(barCount||0, 2);
+  const nBot = Math.ceil(n/2), nTop = n-nBot;
+  const cx=6;
+  let dots='';
+  function rowDots(count, yy){
+    let s='';
+    if(count===1){ s+=`<circle cx="${x0+sw/2}" cy="${yy}" r="3" fill="#c5562a"/>`; return s; }
+    for(let i=0;i<count;i++){
+      const xx = x0+cx + (sw-2*cx)*(count===1?0.5:i/(count-1));
+      s+=`<circle cx="${xx}" cy="${yy}" r="3" fill="#c5562a"/>`;
+    }
+    return s;
+  }
+  dots += rowDots(nBot, y0+sh-cx);
+  if(nTop>0) dots += rowDots(nTop, y0+cx);
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+    <rect x="${x0}" y="${y0}" width="${sw}" height="${sh}" fill="#e8e2d4" stroke="#10233f" stroke-width="2"/>
+    <rect x="${x0+4}" y="${y0+4}" width="${sw-8}" height="${sh-8}" fill="none" stroke="#3d6690" stroke-width="1" stroke-dasharray="3,2"/>
+    ${dots}
+    <text x="${W/2}" y="${H-14}" font-size="9" text-anchor="middle" fill="#333" font-family="monospace">${b}×${h} cm</text>
+    <text x="${W/2}" y="${H-3}" font-size="8" text-anchor="middle" fill="#c5562a" font-family="monospace">${barLabel}</text>
+  </svg>`;
+}
+
+// Steel section profile
+function drawSteelSection(secType, dims){
+  const W=110, H=130, pad=16;
+  const boxW=W-2*pad, boxH=H-2*pad-12, cx=W/2, cy=pad+boxH/2;
+  const navy='#10233f', fill='#b9c4d0';
+  if(secType==='wf'){
+    const {d,bf,tf,tw}=dims;
+    const scale=Math.min(boxW/bf, boxH/d);
+    const dd=d*scale, bb=bf*scale, ftf=Math.max(tf*scale,3), ftw=Math.max(tw*scale,3);
+    const left=cx-bb/2, top=cy-dd/2;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${left}" y="${top}" width="${bb}" height="${ftf}" fill="${fill}" stroke="${navy}" stroke-width="1.5"/>
+      <rect x="${left}" y="${top+dd-ftf}" width="${bb}" height="${ftf}" fill="${fill}" stroke="${navy}" stroke-width="1.5"/>
+      <rect x="${cx-ftw/2}" y="${top+ftf}" width="${ftw}" height="${dd-2*ftf}" fill="${fill}" stroke="${navy}" stroke-width="1.5"/>
+      <text x="${W/2}" y="${H-3}" font-size="8" text-anchor="middle" fill="#333" font-family="monospace">WF ${d}×${bf}</text>
+    </svg>`;
+  } else if(secType==='box'){
+    const {H:hh,B,t}=dims;
+    const scale=Math.min(boxW/B, boxH/hh);
+    const bb=B*scale, dd=hh*scale, tt=Math.max(t*scale,3);
+    const left=cx-bb/2, top=cy-dd/2;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="${left}" y="${top}" width="${bb}" height="${dd}" fill="${fill}" stroke="${navy}" stroke-width="1.5"/>
+      <rect x="${left+tt}" y="${top+tt}" width="${bb-2*tt}" height="${dd-2*tt}" fill="#f7f4ec" stroke="${navy}" stroke-width="1"/>
+      <text x="${W/2}" y="${H-3}" font-size="8" text-anchor="middle" fill="#333" font-family="monospace">Box ${hh}×${B}</text>
+    </svg>`;
+  } else {
+    const {D,t}=dims;
+    const scale=Math.min(boxW, boxH)/D;
+    const rOut=D*scale/2, rIn=(D-2*t)*scale/2;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${cx}" cy="${cy}" r="${rOut}" fill="${fill}" stroke="${navy}" stroke-width="1.5"/>
+      <circle cx="${cx}" cy="${cy}" r="${rIn}" fill="#f7f4ec" stroke="${navy}" stroke-width="1"/>
+      <text x="${W/2}" y="${H-3}" font-size="8" text-anchor="middle" fill="#333" font-family="monospace">Pipe Ø${D}</text>
+    </svg>`;
+  }
+}
+
+function bomCardWithDrawing(e, color, svg, line1, line2){
+  return `<div style="background:#f9f7f2;padding:9px 10px;margin:6px 0;border-left:3px solid ${color};display:flex;gap:12px;align-items:flex-start;">
+    <div style="flex-shrink:0;">${svg}</div>
+    <div style="flex:1;">
+      <strong style="font-size:13px;">${e.id}</strong>${e.desc?' — '+e.desc:''}
+      <span class="status ${e.status==='OK'?'pass':'fail'}" style="float:right;">${e.status==='OK'?'OK / ผ่าน':'NG / ไม่ผ่าน'}</span>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;margin-top:5px;line-height:1.6;clear:both;">
+      ${line1}<br/>${line2}</div>
+    </div></div>`;
+}
+
+function bomCard(e, color, line1, line2){
+  return `<div style="background:#f9f7f2;padding:9px 10px;margin:6px 0;border-left:3px solid ${color};">
+    <strong style="font-size:13px;">${e.id}</strong>${e.desc?' — '+e.desc:''}
+    <span class="status ${e.status==='OK'?'pass':'fail'}" style="float:right;">${e.status==='OK'?'OK / ผ่าน':'NG / ไม่ผ่าน'}</span>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;margin-top:5px;line-height:1.6;clear:both;">
+    ${line1}<br/>${line2}</div></div>`;
+}
+
+function renderBOM(){
+  const total = bom.beams.length+bom.columns.length+bom.slabs.length+bom.footings.length;
+  if(total===0){
+    document.getElementById('bomContent').innerHTML = '<p class="note">ยังไม่มีการคำนวณ — กรุณากำหนดหมายเลขและคำนวณแต่ละหมวดงานเพื่อให้ปรากฏในรายการสรุปนี้</p>';
+    return;
+  }
+  let html = '';
+  if(bom.beams.length){
+    html += '<div class="res-block"><div class="res-block-title">คาน / BEAMS</div>';
+    bom.beams.forEach(e=>{
+      if(e.mat==='steel'){
+        const svg = drawSteelSection(e.secType, e.dims);
+        html += bomCardWithDrawing(e,'var(--rebar)',svg,
+          `<b>เหล็กรูปพรรณ</b> ${e.label} | Fy=${e.Fy} ksc`,
+          `A=${fmt(e.A)} cm², S=${fmt(e.S)} cm³ | L=${fmt(e.L)} m | M=${fmt(e.M)} t·m, V=${fmt(e.V)} ton`);
+      } else {
+        const svg = drawRCSection(e.b, e.h, e.barCount, `${e.barCount}-${e.barSize}`);
+        html += bomCardWithDrawing(e,'var(--rebar)',svg,
+          `เหล็กเมน: <b>${e.barCount}-${e.barSize}</b> (As=${fmt(e.As_provided)} cm²) | ปลอก: <b>${e.stirSize}@${fmt(e.stirSpacing,0)}cm</b>`,
+          `หน้าตัด ${e.b}×${e.h} cm | L=${fmt(e.L)} m | M=${fmt(e.M)} t·m, V=${fmt(e.V)} ton`);
+      }
+    });
+    html += '</div>';
+  }
+  if(bom.columns.length){
+    html += '<div class="res-block"><div class="res-block-title">เสา / COLUMNS</div>';
+    bom.columns.forEach(e=>{
+      if(e.mat==='steel'){
+        const svg = drawSteelSection(e.secType, e.dims);
+        html += bomCardWithDrawing(e,'var(--steel)',svg,
+          `<b>เหล็กรูปพรรณ</b> ${e.label} | Fy=${e.Fy} ksc`,
+          `A=${fmt(e.A)} cm² | P=${fmt(e.P)} ton, M=${fmt(e.M)} t·m`);
+      } else {
+        const svg = drawRCSection(e.b, e.h, e.barCount, `${e.barCount}-${e.barSize}`);
+        html += bomCardWithDrawing(e,'var(--steel)',svg,
+          `เหล็กเมน: <b>${e.barCount}-${e.barSize}</b> (Ast=${fmt(e.Ast)} cm²) | ปลอก: <b>${e.tieSize}@${fmt(e.tieSpacing,0)}cm</b>`,
+          `หน้าตัด ${e.b}×${e.h} cm | P=${fmt(e.P)} ton, M=${fmt(e.M)} t·m`);
+      }
+    });
+    html += '</div>';
+  }
+  if(bom.slabs.length){
+    html += '<div class="res-block"><div class="res-block-title">พื้น / SLABS</div>';
+    bom.slabs.forEach(e=>{ html += bomCard(e,'#5a8f6f',
+      `เหล็กเมน: <b>${e.barSize}@${fmt(e.barSpacing,0)} cm</b> (As=${fmt(e.As_provided)} cm²/m)`,
+      `ความหนา ${e.t} cm | L=${fmt(e.L)} m (${e.support})`); });
+    html += '</div>';
+  }
+  if(bom.footings.length){
+    html += '<div class="res-block"><div class="res-block-title">ฐานราก / FOOTINGS</div>';
+    bom.footings.forEach(e=>{ html += bomCard(e,'#9a6a55',
+      `เหล็กเมน (สองทาง): <b>${e.barSize}@${fmt(e.barSpacing,0)} cm</b> (As=${fmt(e.As_provided)} cm²/m)`,
+      `ขนาด ${fmt(e.B)}×${fmt(e.L)} m, t=${e.t} cm | P=${fmt(e.P)} ton, q=${fmt(e.q)} t/m²`); });
+    html += '</div>';
+  }
+  document.getElementById('bomContent').innerHTML = html;
+}
+
+function exportBOM(){
+  const total = bom.beams.length+bom.columns.length+bom.slabs.length+bom.footings.length;
+  if(total===0){ alert('ยังไม่มีข้อมูล BOM'); return; }
+  let t = 'BILL OF MATERIALS — RC STRUCTURE (WSD / มยผ.1103-61)\n';
+  t += 'Project: '+(document.getElementById('projName').value||'-')+'\n';
+  t += '='.repeat(60)+'\n\n';
+  if(bom.beams.length){ t+='BEAMS / คาน:\n';
+    bom.beams.forEach(e=>{
+      if(e.mat==='steel') t+=`  ${e.id} ${e.desc?'('+e.desc+')':''}: STEEL ${e.label} Fy=${e.Fy} | L=${fmt(e.L)}m M=${fmt(e.M)}t·m | [${e.status}]\n`;
+      else t+=`  ${e.id} ${e.desc?'('+e.desc+')':''}: RC Main ${e.barCount}-${e.barSize}, Stirrup ${e.stirSize}@${fmt(e.stirSpacing,0)}cm | ${e.b}x${e.h}cm L=${fmt(e.L)}m | [${e.status}]\n`;
+    }); t+='\n'; }
+  if(bom.columns.length){ t+='COLUMNS / เสา:\n';
+    bom.columns.forEach(e=>{
+      if(e.mat==='steel') t+=`  ${e.id} ${e.desc?'('+e.desc+')':''}: STEEL ${e.label} Fy=${e.Fy} | P=${fmt(e.P)}ton M=${fmt(e.M)}t·m | [${e.status}]\n`;
+      else t+=`  ${e.id} ${e.desc?'('+e.desc+')':''}: RC Main ${e.barCount}-${e.barSize}, Tie ${e.tieSize}@${fmt(e.tieSpacing,0)}cm | ${e.b}x${e.h}cm | [${e.status}]\n`;
+    }); t+='\n'; }
+  if(bom.slabs.length){ t+='SLABS / พื้น:\n';
+    bom.slabs.forEach(e=>{ t+=`  ${e.id} ${e.desc?'('+e.desc+')':''}: ${e.barSize}@${fmt(e.barSpacing,0)}cm | t=${e.t}cm L=${fmt(e.L)}m | [${e.status}]\n`; }); t+='\n'; }
+  if(bom.footings.length){ t+='FOOTINGS / ฐานราก:\n';
+    bom.footings.forEach(e=>{ t+=`  ${e.id} ${e.desc?'('+e.desc+')':''}: ${e.barSize}@${fmt(e.barSpacing,0)}cm (both ways) | ${fmt(e.B)}x${fmt(e.L)}m t=${e.t}cm | [${e.status}]\n`; }); }
+  const blob = new Blob([t], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='BOM_RC_Structure.txt'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function printBOM(){
+  const total = bom.beams.length+bom.columns.length+bom.slabs.length+bom.footings.length;
+  if(total===0){ alert('ยังไม่มีข้อมูล BOM'); return; }
+  const proj = document.getElementById('projName').value||'-';
+  const eng = document.getElementById('projEng').value||'-';
+  const chk = document.getElementById('projChk').value||'-';
+  const date = document.getElementById('projDate').value||'-';
+
+  function tbl(title, rows, headers){
+    if(!rows.length) return '';
+    let h = `<div class="ps-h">${title}</div><table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:10px;">`;
+    h += '<tr style="background:#eee;">'+headers.map(x=>`<th style="border:1px solid #000;padding:3px 5px;text-align:left;">${x}</th>`).join('')+'</tr>';
+    h += rows.join('');
+    h += '</table>';
+    return h;
+  }
+  const td = (v)=>`<td style="border:1px solid #888;padding:3px 5px;">${v}</td>`;
+
+  const beamRows = bom.beams.map(e=> e.mat==='steel'
+    ? '<tr>'+td(e.id)+td(e.desc||'-')+td(e.label)+td('STEEL Fy='+e.Fy)+td('-')+td(e.status)+'</tr>'
+    : '<tr>'+td(e.id)+td(e.desc||'-')+td(`${e.b}×${e.h}`)+td(`${e.barCount}-${e.barSize}`)+td(`${e.stirSize}@${fmt(e.stirSpacing,0)}`)+td(e.status)+'</tr>');
+  const colRows = bom.columns.map(e=> e.mat==='steel'
+    ? '<tr>'+td(e.id)+td(e.desc||'-')+td(e.label)+td('STEEL Fy='+e.Fy)+td('-')+td(e.status)+'</tr>'
+    : '<tr>'+td(e.id)+td(e.desc||'-')+td(`${e.b}×${e.h}`)+td(`${e.barCount}-${e.barSize}`)+td(`${e.tieSize}@${fmt(e.tieSpacing,0)}`)+td(e.status)+'</tr>');
+  const slabRows = bom.slabs.map(e=>'<tr>'+td(e.id)+td(e.desc||'-')+td(`t=${e.t}`)+td(`${e.barSize}@${fmt(e.barSpacing,0)}`)+td(`L=${fmt(e.L)}m`)+td(e.status)+'</tr>');
+  const footRows = bom.footings.map(e=>'<tr>'+td(e.id)+td(e.desc||'-')+td(`${fmt(e.B)}×${fmt(e.L)}×${e.t}cm`)+td(`${e.barSize}@${fmt(e.barSpacing,0)} (สองทาง)`)+td(`q=${fmt(e.q)}`)+td(e.status)+'</tr>');
+
+  document.getElementById('printSheet').innerHTML = `
+  <div class="ps-page">
+    <div class="ps-titleblock">
+      <div class="ps-tb-cell"><div class="l">โครงการ / Project</div><div class="v">${proj}</div></div>
+      <div class="ps-tb-cell"><div class="l">คำนวณโดย</div><div class="v">${eng}</div></div>
+      <div class="ps-tb-cell"><div class="l">ตรวจสอบโดย</div><div class="v">${chk}</div></div>
+    </div>
+    <div class="ps-body">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">สรุปรายการเหล็กเสริม (Bill of Materials)</div>
+      <div style="font-size:11px;color:#555;margin-bottom:12px;">มาตรฐาน: มยผ.1103-61 / EIT — WSD &nbsp;|&nbsp; วันที่: ${date}</div>
+      ${tbl('คาน / BEAMS', beamRows, ['ID','คำอธิบาย','หน้าตัด(cm)','เหล็กเมน','เหล็กปลอก','สถานะ'])}
+      ${tbl('เสา / COLUMNS', colRows, ['ID','คำอธิบาย','หน้าตัด(cm)','เหล็กเมน','เหล็กปลอก','สถานะ'])}
+      ${tbl('พื้น / SLABS', slabRows, ['ID','คำอธิบาย','ความหนา','เหล็กเมน','ช่วงพาด','สถานะ'])}
+      ${tbl('ฐานราก / FOOTINGS', footRows, ['ID','คำอธิบาย','ขนาด','เหล็กเมน','q','สถานะ'])}
+      <p style="font-size:10px;color:#666;margin-top:16px;">หมายเหตุ: เอกสารนี้เป็นการคำนวณขั้นต้น ต้องได้รับการตรวจสอบและลงนามรับรองโดยวิศวกรผู้ได้รับใบอนุญาต (กว.) ก่อนนำไปใช้งานจริง</p>
+    </div>
+    <div class="ps-foot">
+      <span>ลงชื่อผู้คำนวณ: ____________________</span>
+      <span>ลงชื่อผู้ตรวจสอบ: ____________________</span>
+      <span>หน้า 1/1</span>
+    </div>
+  </div>`;
+  window.print();
+}
+
+function clearBOM(){
+  if(confirm('ล้างข้อมูล BOM ทั้งหมด?')){
+    bom = { beams:[], columns:[], slabs:[], footings:[] };
+    renderBOM();
+  }
+}
+
+
+/* ================= STEEL SECTIONS (ASD) ================= */
+const Es_steel = 2040000; // ksc, modulus of steel
+
+// Compute section properties from geometry. Returns {A, I, S, dTotal, webArea}
+function steelSectionProps(type, dims){
+  if(type==='wf'){ // wide flange / H / I
+    const {d, bf, tf, tw} = dims;
+    const A = 2*bf*tf + (d-2*tf)*tw;
+    const I = (bf*Math.pow(d,3))/12 - ((bf-tw)*Math.pow(d-2*tf,3))/12;
+    const S = I/(d/2);
+    const r = Math.sqrt(I/A);
+    const webArea = d*tw; // approx for shear
+    return {A, I, S, r, dTotal:d, webArea, label:`WF d${d}×bf${bf}×tf${tf}×tw${tw}`};
+  } else if(type==='box'){
+    const {H, B, t} = dims;
+    const A = H*B - (H-2*t)*(B-2*t);
+    const I = (B*Math.pow(H,3) - (B-2*t)*Math.pow(H-2*t,3))/12;
+    const S = I/(H/2);
+    const r = Math.sqrt(I/A);
+    const webArea = 2*H*t; // two webs
+    return {A, I, S, r, dTotal:H, webArea, label:`Box H${H}×B${B}×t${t}`};
+  } else if(type==='pipe'){
+    const {D, t} = dims;
+    const Di = D-2*t;
+    const A = Math.PI/4*(D*D - Di*Di);
+    const I = Math.PI/64*(Math.pow(D,4) - Math.pow(Di,4));
+    const S = I/(D/2);
+    const r = Math.sqrt(I/A);
+    const webArea = 0.5*A; // approx effective shear area for round
+    return {A, I, S, r, dTotal:D, webArea, label:`Pipe D${D}×t${t}`};
+  }
+}
+
+function readSteelDims(prefix){
+  const type = document.getElementById(prefix+'_secType').value;
+  if(type==='wf'){
+    return {type, dims:{
+      d:parseFloat(document.getElementById(prefix+'_d_wf').value)||0,
+      bf:parseFloat(document.getElementById(prefix+'_bf_wf').value)||0,
+      tf:parseFloat(document.getElementById(prefix+'_tf_wf').value)||0,
+      tw:parseFloat(document.getElementById(prefix+'_tw_wf').value)||0
+    }};
+  } else if(type==='box'){
+    return {type, dims:{
+      H:parseFloat(document.getElementById(prefix+'_H_box').value)||0,
+      B:parseFloat(document.getElementById(prefix+'_B_box').value)||0,
+      t:parseFloat(document.getElementById(prefix+'_t_box').value)||0
+    }};
+  } else {
+    return {type, dims:{
+      D:parseFloat(document.getElementById(prefix+'_D_pipe').value)||0,
+      t:parseFloat(document.getElementById(prefix+'_t_pipe').value)||0
+    }};
+  }
+}
+
+// Steel beam — ASD bending + shear
+function steelBeamASD(Fy, type, dims, M_tm, V_t){
+  const p = steelSectionProps(type, dims);
+  const Fb = 0.66*Fy;            // allowable bending (compact, laterally supported)
+  const Fv = 0.40*Fy;            // allowable shear
+  const M_kgcm = M_tm*100000;
+  const fb = M_kgcm/p.S;         // actual bending stress
+  const V_kg = V_t*1000;
+  const fv = V_kg/p.webArea;     // actual shear stress
+  const bendOK = fb<=Fb;
+  const shearOK = fv<=Fv;
+  const S_req = M_kgcm/Fb;       // required section modulus
+  return {...p, Fy, Fb, Fv, fb, fv, M_tm, V_t, bendOK, shearOK, S_req,
+    bendRatio:fb/Fb, shearRatio:fv/Fv};
+}
+
+// Steel column — ASD axial + bending interaction
+function steelColumnASD(Fy, type, dims, P_t, M_tm, KL_cm){
+  const p = steelSectionProps(type, dims);
+  // allowable axial stress Fa via slenderness (AISC ASD simplified)
+  const slender = KL_cm/p.r;
+  const Cc = Math.sqrt(2*Math.PI*Math.PI*Es_steel/Fy);
+  let Fa;
+  if(slender<=Cc){
+    const ratio = slender/Cc;
+    Fa = (1 - ratio*ratio/2)*Fy / (5/3 + 3*ratio/8 - Math.pow(ratio,3)/8);
+  } else {
+    Fa = (12*Math.PI*Math.PI*Es_steel)/(23*slender*slender);
+  }
+  const Fb = 0.66*Fy;
+  const P_kg = P_t*1000;
+  const fa = P_kg/p.A;
+  const M_kgcm = M_tm*100000;
+  const fb = M_kgcm/p.S;
+  const interaction = fa/Fa + fb/Fb; // simplified (no amplification)
+  const ok = interaction<=1.0 && slender<=200;
+  return {...p, Fy, slender, Cc, Fa, Fb, fa, fb, P_t, M_tm, interaction, ok,
+    slenderOK:slender<=200};
+}
+
+/* ================= MATERIAL TOGGLE ================= */
+function setMaterial(prefix){
+  const mat = document.getElementById(prefix+'_matType').value;
+  document.querySelectorAll('.mat-rc-'+prefix).forEach(el=>{
+    el.style.display = mat==='rc' ? '' : 'none';
+  });
+  document.querySelectorAll('.mat-steel-'+prefix).forEach(el=>{
+    el.style.display = mat==='steel' ? '' : 'none';
+  });
+}
+
+function toggleSteelDims(prefix){
+  const type = document.getElementById(prefix+'_secType').value;
+  document.querySelector('.'+prefix+'-dims-wf').style.display = type==='wf' ? '' : 'none';
+  document.querySelector('.'+prefix+'-dims-box').style.display = type==='box' ? '' : 'none';
+  document.querySelector('.'+prefix+'-dims-pipe').style.display = type==='pipe' ? '' : 'none';
+}
+
+
+/* ================= LOAD PATH / CHAIN ================= */
+let chain = { roof:null, slab:null, beam:null, column:null };
+
+function toggleChain(){
+  const body = document.getElementById('chainBody');
+  const btn = document.getElementById('chainToggleBtn');
+  if(body.style.display==='none'){ body.style.display=''; btn.textContent='ซ่อน ▲'; }
+  else { body.style.display='none'; btn.textContent='แสดง ▼'; }
+}
+
+function updateRoofChain(){
+  const DL = parseFloat(document.getElementById('r_DL').value)||0;
+  const LL = parseFloat(document.getElementById('r_LL').value)||0;
+  const trib = parseFloat(document.getElementById('r_trib').value)||0;
+  const wArea = DL+LL; // kg/m2
+  const wLine = wArea*trib; // kg/m, for direct beam use
+  chain.roof = {DL,LL,wArea,trib,wLine};
+  renderChainStatus();
+}
+
+function renderChainStatus(){
+  let html = '';
+  if(chain.roof){
+    html += `<div class="res-row"><span class="k">หลังคา: w รวม (DL+LL)</span><span class="v">${fmt(chain.roof.wArea)} kg/m²</span></div>`;
+    html += `<div class="res-row"><span class="k">หลังคา: line load (× trib width ${fmt(chain.roof.trib)} m)</span><span class="v">${fmt(chain.roof.wLine)} kg/m</span></div>`;
+  }
+  if(chain.slab){
+    html += `<div class="res-row"><span class="k">พื้น: w รวม</span><span class="v">${fmt(chain.slab.wArea)} kg/m²</span></div>`;
+    html += `<div class="res-row"><span class="k">พื้น: ปฏิกิริยาที่คานรองรับ (reaction)</span><span class="v">${fmt(chain.slab.reactionPerM)} kg/m</span></div>`;
+  }
+  if(chain.beam){
+    html += `<div class="res-row"><span class="k">คาน: ปฏิกิริยาที่ปลายคาน (ลงเสา)</span><span class="v">${fmt(chain.beam.reactionEnd)} kg (${fmt(chain.beam.reactionEnd/1000)} ton)</span></div>`;
+  }
+  if(chain.column){
+    html += `<div class="res-row"><span class="k">เสา: แรงตามแนวแกนที่ส่งต่อ (ลงฐานราก)</span><span class="v">${fmt(chain.column.axialOut)} ton</span></div>`;
+  }
+  if(!html) html = '<p class="note">ยังไม่มีข้อมูล — กรอกโหลดหลังคา แล้วกด "บันทึกโหลดหลังคา" จากนั้นกดคำนวณในแต่ละหมวดงานตามลำดับ พื้น → คาน → เสา → ฐานราก เพื่อส่งต่อโหลดอัตโนมัติ</p>';
+  document.getElementById('chainStatus').innerHTML = html;
+}
+
+function pullToSlab(){
+  if(!chain.roof){ alert('กรุณากรอกและบันทึกโหลดหลังคาก่อน (ด้านบนสุดของหน้า)'); return; }
+  document.getElementById('s_SDL').value = (parseFloat(document.getElementById('s_SDL').value)||0) + chain.roof.wArea;
+  const info = document.getElementById('slabLinkInfo');
+  info.style.display='block';
+  info.textContent = `✓ รวมน้ำหนักหลังคา ${fmt(chain.roof.wArea)} kg/m² เข้าไปใน SDL แล้ว — กดคำนวณเพื่ออัพเดทผล`;
+}
+
+function pullToBeam(source){
+  const info = document.getElementById('beamLinkInfo');
+  const L = parseFloat(document.getElementById('b_L').value)||0;
+  const support = document.getElementById('b_support').value;
+  if(L<=0){ alert('กรุณากรอกช่วงพาดคาน L ก่อน'); return; }
+  let w = null, label='';
+  if(source==='slab'){
+    if(!chain.slab){ alert('กรุณาคำนวณ "พื้น" ก่อน เพื่อให้มีค่าปฏิกิริยาส่งมาที่คาน'); return; }
+    w = chain.slab.reactionPerM; label='พื้น (reaction)';
+  } else if(source==='roof'){
+    if(!chain.roof){ alert('กรุณากรอกและบันทึกโหลดหลังคาก่อน'); return; }
+    w = chain.roof.wLine; label='หลังคา (โดยตรง)';
+  }
+  const Mcoef = support==='simple'? 1/8 : 1/10;
+  const Vcoef = support==='simple'? 0.5 : 0.6;
+  const M_tm = Mcoef*(w/1000)*L*L; // w in kg/m -> ton/m
+  const V_t = Vcoef*(w/1000)*L;
+  document.getElementById('b_M').value = M_tm.toFixed(3);
+  document.getElementById('b_V').value = V_t.toFixed(3);
+  info.style.display='block';
+  info.textContent = `✓ ดึงจาก ${label}: w=${fmt(w)} kg/m, L=${fmt(L)} m (${support}) → M=${fmt(M_tm)} t·m, V=${fmt(V_t)} ton — ค่าถูกใส่ในช่อง Mu/Vu แล้ว`;
+}
+
+function pullToColumn(){
+  const info = document.getElementById('columnLinkInfo');
+  if(!chain.beam){ alert('กรุณาคำนวณ "คาน" ก่อน เพื่อให้มีค่าปฏิกิริยาส่งมาที่เสา'); return; }
+  document.getElementById('c_P').value = (chain.beam.reactionEnd/1000).toFixed(3);
+  info.style.display='block';
+  info.textContent = `✓ ดึงแรงตามแนวแกนจากคาน: P = ${fmt(chain.beam.reactionEnd/1000)} ton ใส่ในช่อง P แล้ว (หากมีหลายคานมาลงเสาเดียวกัน กรุณารวมเพิ่มเอง)`;
+}
+
+function pullToFooting(){
+  const info = document.getElementById('footingLinkInfo');
+  if(!chain.column){ alert('กรุณาคำนวณ "เสา" ก่อน เพื่อให้มีค่าแรงตามแนวแกนส่งมาที่ฐานราก'); return; }
+  document.getElementById('f_P').value = chain.column.axialOut.toFixed(3);
+  info.style.display='block';
+  info.textContent = `✓ ดึงแรงตามแนวแกนจากเสา: P = ${fmt(chain.column.axialOut)} ton ใส่ในช่อง P แล้ว`;
+}
+
+
+/* ============================================================
+   BEAM — WSD singly reinforced rectangular beam
+   ============================================================ */
+function beamWSD(fc, fyfs, b, h, cover, M_tm, V_t, stirA){
+  const fy = fyfs[0], fs = fyfs[1];
+  const d = h - cover;
+  const fc_allow = 0.45*fc;
+  const n = n_ratio(fc);
+  const k = 1/(1+ fs/(n*fc_allow));
+  const j = 1 - k/3;
+  const R = 0.5*fc_allow*k*j; // ksc
+  const Mr_balanced = R*b*d*d/100000; // kg-cm -> t-m (divide by 1e5: 1 t-m =100000 kg-cm)
+  const M_kgcm = M_tm*100000;
+  const As_req = M_kgcm/(fs*j*d); // cm^2
+  const rho_req = As_req/(b*d);
+  const rho_bal = (0.5*fc_allow*k)/fs;
+  const rho_min = 14.0/fy; // ACI WSD-era min steel ratio approx (14/fy in ksc... actually 14.1/fy with fy in ksc gives small ratio - use 0.0033 fallback)
+  const rho_min_eff = Math.max(rho_min, 0.0024);
+  const As_min = rho_min_eff*b*d;
+  const As_final = Math.max(As_req, As_min);
+  const overReinforced = rho_req > rho_bal;
+
+  // shear
+  const d_cm = d;
+  const Vc = 0.29*Math.sqrt(fc)*b*d_cm/1000; // ton (0.29*sqrt(fc) ksc * cm^2 /1000 = ton)
+  const V_kg = V_t*1000;
+  const Vc_kg = 0.29*Math.sqrt(fc)*b*d_cm;
+  const needStirrup = V_kg > Vc_kg;
+  let Av_s = null, stirrupSpacing=null;
+  if(needStirrup){
+    const Vs = V_kg - Vc_kg;
+    Av_s = Vs/(fs*d_cm); // cm^2/cm required Av/s (using 2-leg stirrup area = stirA*2 typically, here stirA passed as 1 leg area)
+    const Av_2leg = stirA*2;
+    stirrupSpacing = Av_2leg/Av_s;
+  } else {
+    stirrupSpacing = Math.min(d_cm/2, 30); // max spacing per code (cm)
+  }
+  const beamOK = !overReinforced; // if over-reinforced, need to enlarge section or double reinforce
+
+  const res = {fc,fy,fs,b,h,d,cover,fc_allow,n,k,j,R,Mr_balanced,M_tm,As_req,rho_req,rho_bal,As_min,As_final,
+    overReinforced,Vc_kg,V_kg,needStirrup,Av_s,stirrupSpacing,beamOK};
+  return res;
+}
+
+function autoMomentBeam(){
+  const w = parseFloat(document.getElementById('b_w').value)||0;
+  const P = parseFloat(document.getElementById('b_P').value)||0;
+  const L = parseFloat(document.getElementById('b_L').value)||0;
+  const support = document.getElementById('b_support').value;
+  if(L<=0){ alert('กรุณากรอกช่วงพาดคาน L ก่อน'); return; }
+  let M, V;
+  if(support==='simple'){
+    M = w*L*L/8 + P*L/4;
+    V = w*L/2 + P/2;
+  } else { // continuous (approximate ACI coefficients)
+    M = w*L*L/10 + P*L/6;
+    V = 0.6*w*L + P/2;
+  }
+  document.getElementById('b_M').value = M.toFixed(3);
+  document.getElementById('b_V').value = V.toFixed(3);
+  const info = document.getElementById('beamAutoInfo');
+  info.style.display='block';
+  info.textContent = `✓ ${support==='simple'?'Simple':'Continuous'} | w=${fmt(w)} t/m, P=${fmt(P)} ton, L=${fmt(L)} m → M=${fmt(M)} t·m, V=${fmt(V)} ton (ใส่ในช่อง Mu/Vu แล้ว)`;
+}
+
+function calcSteelBeam(){
+  const Fy = parseFloat(document.getElementById('b_steelGrade').value);
+  const M = parseFloat(document.getElementById('b_M').value);
+  const V = parseFloat(document.getElementById('b_V').value);
+  const {type, dims} = readSteelDims('b');
+  const r = steelBeamASD(Fy, type, dims, M, V);
+  r.matType = 'steel';
+  r.secType = type;
+  r.dims = dims;
+  lastResult.beam = r;
+  chain.beam = { reactionEnd: V*1000 };
+  renderChainStatus();
+
+  const html = `
+  <div class="res-block">
+    <div class="res-block-title">หน้าตัดเหล็กรูปพรรณ / Steel Section</div>
+    <div class="res-row"><span class="k">รูปแบบ</span><span class="v">${r.label}</span></div>
+    <div class="res-row"><span class="k">พื้นที่หน้าตัด A</span><span class="v">${fmt(r.A)} cm²</span></div>
+    <div class="res-row"><span class="k">โมเมนต์ความเฉื่อย I</span><span class="v">${fmt(r.I,0)} cm⁴</span></div>
+    <div class="res-row"><span class="k">โมดูลัสหน้าตัด S</span><span class="v">${fmt(r.S)} cm³</span></div>
+    <div class="res-row"><span class="k">รัศมีไจเรชัน r</span><span class="v">${fmt(r.r)} cm</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">การดัด / Bending (ASD) ${statusTag(r.bendOK)}</div>
+    <div class="res-row"><span class="k">หน่วยแรงดัดที่ยอมให้ Fb = 0.66Fy</span><span class="v">${fmt(r.Fb)} ksc</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงดัดจริง fb = M/S</span><span class="v">${fmt(r.fb)} ksc</span></div>
+    <div class="res-row"><span class="k">อัตราส่วน fb/Fb</span><span class="v">${fmt(r.bendRatio,2)}</span></div>
+    <div class="res-row"><span class="k">โมดูลัสหน้าตัดที่ต้องการ S,req</span><span class="v">${fmt(r.S_req)} cm³</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">แรงเฉือน / Shear (ASD) ${statusTag(r.shearOK)}</div>
+    <div class="res-row"><span class="k">หน่วยแรงเฉือนที่ยอมให้ Fv = 0.40Fy</span><span class="v">${fmt(r.Fv)} ksc</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงเฉือนจริง fv = V/Aw</span><span class="v">${fmt(r.fv)} ksc</span></div>
+    <div class="res-row"><span class="k">อัตราส่วน fv/Fv</span><span class="v">${fmt(r.shearRatio,2)}</span></div>
+  </div>
+  <p class="note">หมายเหตุ: ใช้วิธี ASD (Fb=0.66Fy) สมมติหน้าตัด compact และมีการค้ำยันด้านข้างเต็มที่ (fully laterally supported) หากคานยาวไม่มีการค้ำยัน ต้องตรวจสอบ lateral-torsional buckling (ลด Fb) เพิ่มเติม</p>
+  `;
+  document.getElementById('beamResults').innerHTML = html;
+  addToBeamBOM(r);
+}
+
+function calcBeam(){
+  const matType = document.getElementById('b_matType').value;
+  if(matType==='steel'){ calcSteelBeam(); return; }
+  const fc = parseFloat(document.getElementById('b_fc').value);
+  const fyfs = document.getElementById('b_steel').value.split('|').map(Number);
+  const b = parseFloat(document.getElementById('b_b').value);
+  const h = parseFloat(document.getElementById('b_h').value);
+  const cover = parseFloat(document.getElementById('b_cover').value);
+  const M = parseFloat(document.getElementById('b_M').value);
+  const V = parseFloat(document.getElementById('b_V').value);
+  const stirA = parseFloat(document.getElementById('b_stirDia').value);
+  const barSize = document.getElementById('b_barSize').value;
+  const barCount = parseInt(document.getElementById('b_barCount').value)||0;
+
+  const bDepthErr = validateDepth(h, cover, 'ความสูง h');
+  if(bDepthErr && (h-cover)<=0){
+    document.getElementById('beamResults').innerHTML =
+      `<div class="warn-banner" style="margin:0;">❌ ${bDepthErr}</div>
+       <p class="note">ตัวอย่าง: คานสูง 40 ซม. ให้กรอก h = 40 (ไม่ใช่ 0.4)</p>`;
+    return;
+  }
+
+  const r = beamWSD(fc,fyfs,b,h,cover,M,V,stirA);
+  r.barSize = barSize;
+  r.barCount = barCount;
+  r.As_provided = rebarArea(barSize)*barCount;
+  r.barSteelOK = r.As_provided >= r.As_final;
+  r.barCountSuggest = suggestBarCount(r.As_final, barSize);
+  lastResult.beam = r;
+
+  // push end reaction (kg) into chain — for udl, approximate reaction = V (shear at support)
+  chain.beam = { reactionEnd: r.V_kg };
+  renderChainStatus();
+
+
+  const html = `
+  ${bDepthErr ? `<div class="warn-banner" style="margin-bottom:12px;">${bDepthErr}</div>` : ''}
+  <div class="res-block">
+    <div class="res-block-title">คุณสมบัติหน้าตัด / Section Properties</div>
+    <div class="res-row"><span class="k">ความสูงประสิทธิผล d</span><span class="v">${fmt(r.d)} cm</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงอัดที่ยอมให้ fc</span><span class="v">${fmt(r.fc_allow)} ksc</span></div>
+    <div class="res-row"><span class="k">อัตราส่วนโมดูลาร์ n = Es/Ec</span><span class="v">${fmt(r.n,1)}</span></div>
+    <div class="res-row"><span class="k">k, j (WSD coefficients)</span><span class="v">k=${fmt(r.k,3)}, j=${fmt(r.j,3)}</span></div>
+  </div>
+  <div class="formula">k = 1 / (1 + fs/(n·fc)) &nbsp;|&nbsp; j = 1 - k/3 &nbsp;|&nbsp; R = 0.5·fc·k·j</div>
+
+  <div class="res-block">
+    <div class="res-block-title">โมเมนต์ดัด / Flexure ${statusTag(r.beamOK)}</div>
+    <div class="res-row"><span class="k">โมเมนต์ที่รับได้สูงสุด (balanced) Mr</span><span class="v">${fmt(r.Mr_balanced)} t·m</span></div>
+    <div class="res-row"><span class="k">โมเมนต์ที่ใช้ออกแบบ M</span><span class="v">${fmt(r.M_tm)} t·m</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กที่ต้องการ As,req</span><span class="v">${fmt(r.As_req)} cm²</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กขั้นต่ำ As,min</span><span class="v">${fmt(r.As_min)} cm²</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กที่ใช้จริง As (ใช้)</span><span class="v">${fmt(r.As_final)} cm²</span></div>
+    <div class="res-row"><span class="k">อัตราส่วนเหล็ก ρ / ρ balanced</span><span class="v">${fmt(r.rho_req,4)} / ${fmt(r.rho_bal,4)}</span></div>
+  </div>
+  ${r.overReinforced? '<p class="note" style="color:var(--bad)">⚠ ρ เกิน ρ balanced — หน้าตัดเล็กเกินไป ต้องเพิ่มขนาดคานหรือใช้ Doubly-reinforced beam</p>' : ''}
+
+  <div class="res-block">
+    <div class="res-block-title">เหล็กเสริมหลักที่เลือกใช้ / Main Bars ${statusTag(r.barSteelOK)}</div>
+    <div class="res-row"><span class="k">เลือกใช้</span><span class="v">${r.barCount} - ${r.barSize}</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กที่ใช้จริง As,provided</span><span class="v">${fmt(r.As_provided)} cm²</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กที่ต้องการ As,req</span><span class="v">${fmt(r.As_final)} cm²</span></div>
+    <div class="res-row"><span class="k">จำนวนเส้นที่ต้องการอย่างน้อย (${r.barSize})</span><span class="v">${r.barCountSuggest} เส้น</span></div>
+  </div>
+  ${!r.barSteelOK? `<p class="note" style="color:var(--bad)">⚠ เหล็กที่เลือกไม่พอ ต้องใช้อย่างน้อย ${r.barCountSuggest}-${r.barSize} (หรือเปลี่ยนขนาดเหล็ก)</p>` : ''}
+
+  <div class="res-block">
+    <div class="res-block-title">แรงเฉือน / Shear ${statusTag(true)}</div>
+    <div class="res-row"><span class="k">แรงเฉือนที่คอนกรีตรับได้ Vc</span><span class="v">${fmt(r.Vc_kg/1000)} ton</span></div>
+    <div class="res-row"><span class="k">แรงเฉือนออกแบบ V</span><span class="v">${fmt(r.V_kg/1000)} ton</span></div>
+    <div class="res-row"><span class="k">ต้องการเหล็กปลอกรับแรงเฉือนเพิ่ม?</span><span class="v">${r.needStirrup? 'ใช่ / Yes' : 'ไม่ / No'}</span></div>
+    <div class="res-row"><span class="k">ระยะเรียงเหล็กปลอก s (ที่คำนวณ/สูงสุด)</span><span class="v">${fmt(r.stirrupSpacing)} cm</span></div>
+  </div>
+  `;
+  document.getElementById('beamResults').innerHTML = html;
+  addToBeamBOM(r);
+}
+
+/* ============================================================
+   COLUMN — WSD short tied column, axial + uniaxial moment
+   (approximate transformed gross-section method)
+   ============================================================ */
+function columnWSD(fc, fy, b, h, Ast, P_t, M_tm){
+  const fc_allow = 0.45*fc;
+  const fs_allow_axial = Math.min(0.40*fy, 1700); // allowable steel stress for column, capped
+  const Ag = b*h;
+  const n = n_ratio(fc);
+  // pure axial allowable capacity (concentric), tied column factor 0.85? use Thai practice w/o extra factor for clarity
+  const Pa_axial = (0.25*fc*(Ag-Ast) + fs_allow_axial*Ast)/1000; // ton
+
+  // transformed section properties for combined check (uncracked, symmetric reinforcement assumed)
+  const At = Ag + (n-1)*Ast; // transformed area
+  const I_gross = b*Math.pow(h,3)/12;
+  const I_steel_extra = (n-1)*Ast*Math.pow(h/2 - (h*0.1),2); // rough approx, steel near extreme fiber at 0.1h from face
+  const I_t = I_gross + (n-1)*Ast*Math.pow(h/4,2); // simplified contribution
+  const S = I_t/(h/2);
+
+  const P_kg = P_t*1000;
+  const M_kgcm = M_tm*100000;
+  const fc_axial = P_kg/At;
+  const fc_bending = M_kgcm/S;
+  const fc_max = fc_axial + fc_bending;
+  const fc_min = fc_axial - fc_bending;
+  const stressOK = fc_max <= fc_allow;
+  const ratio = fc_max/fc_allow;
+
+  const res={fc,fy,b,h,Ast,Ag,fc_allow,fs_allow_axial,Pa_axial,P_t,At,I_t,S,fc_axial,fc_bending,fc_max,fc_min,stressOK,ratio,M_tm};
+  return res;
+}
+
+function updateColumnAst(){
+  const barSize = document.getElementById('c_barSize').value;
+  const count = parseInt(document.getElementById('c_barCount').value)||0;
+  const Ast = rebarArea(barSize)*count;
+  document.getElementById('c_Ast').value = Ast.toFixed(2);
+  return {barSize,count,Ast};
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('c_barSize').addEventListener('change',updateColumnAst);
+  document.getElementById('c_barCount').addEventListener('input',updateColumnAst);
+  updateColumnAst();
+});
+
+function calcSteelColumn(){
+  const Fy = parseFloat(document.getElementById('c_steelGrade').value);
+  const P = parseFloat(document.getElementById('c_P').value);
+  const M = parseFloat(document.getElementById('c_M').value);
+  const L = parseFloat(document.getElementById('c_len').value)||3;
+  const K = parseFloat(document.getElementById('c_K').value)||1;
+  const KL = K*L*100; // cm
+  const {type, dims} = readSteelDims('c');
+  const r = steelColumnASD(Fy, type, dims, P, M, KL);
+  r.matType = 'steel';
+  r.secType = type;
+  r.dims = dims;
+  lastResult.column = r;
+  chain.column = { axialOut: P };
+  renderChainStatus();
+
+  const html = `
+  <div class="res-block">
+    <div class="res-block-title">หน้าตัดเหล็กรูปพรรณ / Steel Section</div>
+    <div class="res-row"><span class="k">รูปแบบ</span><span class="v">${r.label}</span></div>
+    <div class="res-row"><span class="k">พื้นที่หน้าตัด A</span><span class="v">${fmt(r.A)} cm²</span></div>
+    <div class="res-row"><span class="k">รัศมีไจเรชัน r</span><span class="v">${fmt(r.r)} cm</span></div>
+    <div class="res-row"><span class="k">โมดูลัสหน้าตัด S</span><span class="v">${fmt(r.S)} cm³</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">ความชะลูด / Slenderness ${statusTag(r.slenderOK)}</div>
+    <div class="res-row"><span class="k">KL/r</span><span class="v">${fmt(r.slender,1)} (จำกัด ≤ 200)</span></div>
+    <div class="res-row"><span class="k">Cc</span><span class="v">${fmt(r.Cc,1)}</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงอัดที่ยอมให้ Fa</span><span class="v">${fmt(r.Fa)} ksc</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">แรงอัด + ดัด / Combined (ASD Interaction) ${statusTag(r.ok)}</div>
+    <div class="res-row"><span class="k">fa = P/A</span><span class="v">${fmt(r.fa)} ksc</span></div>
+    <div class="res-row"><span class="k">fb = M/S</span><span class="v">${fmt(r.fb)} ksc</span></div>
+    <div class="res-row"><span class="k">Fa / Fb</span><span class="v">${fmt(r.Fa)} / ${fmt(r.Fb)} ksc</span></div>
+    <div class="res-row"><span class="k">fa/Fa + fb/Fb</span><span class="v">${fmt(r.interaction,3)} (≤ 1.0)</span></div>
+  </div>
+  <p class="note">หมายเหตุ: ใช้ ASD interaction แบบง่าย (ไม่รวม moment amplification factor / Cm) เหมาะกับการตรวจสอบขั้นต้น สำหรับเสายาวหรือ frame ที่มี sidesway ต้องตรวจสอบ AISC interaction เต็มรูปแบบ</p>
+  `;
+  document.getElementById('columnResults').innerHTML = html;
+  addToColumnBOM(r);
+}
+
+function calcColumn(){
+  const matType = document.getElementById('c_matType').value;
+  if(matType==='steel'){ calcSteelColumn(); return; }
+  updateColumnAst();
+  const fc = parseFloat(document.getElementById('c_fc').value);
+  const fy = parseFloat(document.getElementById('c_steel').value);
+  const b = parseFloat(document.getElementById('c_b').value);
+  const h = parseFloat(document.getElementById('c_h').value);
+  const Ast = parseFloat(document.getElementById('c_Ast').value);
+  const P = parseFloat(document.getElementById('c_P').value);
+  const M = parseFloat(document.getElementById('c_M').value);
+
+  const r = columnWSD(fc,fy,b,h,Ast,P,M);
+  r.barSize = document.getElementById('c_barSize').value;
+  r.barCount = parseInt(document.getElementById('c_barCount').value)||0;
+  lastResult.column = r;
+
+  // pass the column's design axial load straight down to the footing
+  chain.column = { axialOut: r.P_t };
+  renderChainStatus();
+
+
+  const rhoG = (r.Ast/r.Ag*100);
+  const rhoOK = rhoG>=1.0 && rhoG<=8.0;
+
+  const html = `
+  <div class="res-block">
+    <div class="res-block-title">คุณสมบัติหน้าตัด / Section Properties</div>
+    <div class="res-row"><span class="k">เหล็กเมนที่เลือกใช้</span><span class="v">${r.barCount} - ${r.barSize} (Ast = ${fmt(r.Ast)} cm²)</span></div>
+    <div class="res-row"><span class="k">พื้นที่หน้าตัดรวม Ag</span><span class="v">${fmt(r.Ag)} cm²</span></div>
+    <div class="res-row"><span class="k">อัตราส่วนเหล็กเสริม ρg = Ast/Ag</span><span class="v">${fmt(rhoG,2)} % ${statusTag(rhoOK)}</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงอัดที่ยอมให้ fc</span><span class="v">${fmt(r.fc_allow)} ksc</span></div>
+  </div>
+  <p class="note">ρg ตามมาตรฐานควรอยู่ระหว่าง 1%–8% ของ Ag (ACI/EIT)</p>
+
+  <div class="res-block">
+    <div class="res-block-title">กำลังรับแรงตามแนวแกน / Axial Capacity ${statusTag(r.P_t<=r.Pa_axial)}</div>
+    <div class="res-row"><span class="k">กำลังรับแรงตามแนวแกนสูงสุด Pa (concentric)</span><span class="v">${fmt(r.Pa_axial)} ton</span></div>
+    <div class="res-row"><span class="k">แรงตามแนวแกนออกแบบ P</span><span class="v">${fmt(r.P_t)} ton</span></div>
+  </div>
+  <div class="formula">Pa = 0.25·fc'·(Ag−Ast) + Fs·Ast &nbsp; , &nbsp; Fs = min(0.40·fy, 1700 ksc)</div>
+
+  <div class="res-block">
+    <div class="res-block-title">แรงตามแนวแกน + โมเมนต์ดัด (Approx. uncracked transformed section) ${statusTag(r.stressOK)}</div>
+    <div class="res-row"><span class="k">หน่วยแรงจากแรงตามแนวแกน</span><span class="v">${fmt(r.fc_axial)} ksc</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงจากโมเมนต์ดัด</span><span class="v">±${fmt(r.fc_bending)} ksc</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงอัดสูงสุดรวม fc,max</span><span class="v">${fmt(r.fc_max)} ksc</span></div>
+    <div class="res-row"><span class="k">หน่วยแรงด้านตรงข้าม fc,min</span><span class="v">${fmt(r.fc_min)} ksc ${r.fc_min<0?'(แรงดึง / tension side)':''}</span></div>
+    <div class="res-row"><span class="k">อัตราส่วน fc,max / fc,allow</span><span class="v">${fmt(r.ratio,2)}</span></div>
+  </div>
+  <p class="note">⚠ วิธีนี้เป็นการตรวจสอบขั้นต้นแบบประมาณ (ไม่ใช่ interaction diagram เต็มรูปแบบ) เหมาะสำหรับเสาสั้น (short column, kLu/r ต่ำ) และ uniaxial bending เท่านั้น</p>
+  `;
+  document.getElementById('columnResults').innerHTML = html;
+  addToColumnBOM(r);
+}
+
+/* ============================================================
+   SLAB — one-way slab, per 1m strip, treated as shallow beam
+   ============================================================ */
+function slabWSD(fc, fyfs, t, cover, L, LL, SDL, support){
+  const fy=fyfs[0], fs=fyfs[1];
+  const b = 100; // cm strip
+  const d = t - cover;
+  const selfWeight = t/100*2400; // kg/m^2 (2400 kg/m3 concrete)
+  const w = (LL+SDL+selfWeight)/1000; // t/m^2 -> for 1m strip = t/m run
+  let Mcoef, Vcoef;
+  if(support==='simple'){ Mcoef = 1/8; Vcoef=0.5; }
+  else { Mcoef = 1/10; Vcoef=0.6; } // simplified continuous coefficients
+  const M_tm = Mcoef*w*L*L; // t-m per meter width
+  const V_t = Vcoef*w*L;
+
+  const fc_allow=0.45*fc;
+  const n=n_ratio(fc);
+  const k=1/(1+fs/(n*fc_allow));
+  const j=1-k/3;
+  const R=0.5*fc_allow*k*j;
+  const Mr = R*b*d*d/100000;
+  const M_kgcm = M_tm*100000;
+  const As_req = M_kgcm/(fs*j*d);
+  const rho_min_temp = fy>=4000? 0.0018 : 0.002; // temperature & shrinkage steel ratio (มยผ.)
+  const As_min = rho_min_temp*b*t;
+  const As_final = Math.max(As_req, As_min);
+
+  const Vc_kg = 0.29*Math.sqrt(fc)*b*d;
+  const V_kg = V_t*1000;
+  const shearOK = V_kg<=Vc_kg;
+
+  const LdLimit = support==='simple'? 20:28;
+  const Ld = (L*100)/d;
+  const deflOK = Ld<=LdLimit;
+
+  return {fc,fy,fs,t,d,cover,L,LL,SDL,selfWeight,w,Mcoef,M_tm,V_t,fc_allow,n,k,j,R,Mr,As_req,As_min,As_final,
+    Vc_kg,V_kg,shearOK,LdLimit,Ld,deflOK,support};
+}
+
+function calcSlab(){
+  const fc = parseFloat(document.getElementById('s_fc').value);
+  const fyfs = document.getElementById('s_steel').value.split('|').map(Number);
+  const t = parseFloat(document.getElementById('s_t').value);
+  const cover = parseFloat(document.getElementById('s_cover').value);
+  const L = parseFloat(document.getElementById('s_L').value);
+  const LL = parseFloat(document.getElementById('s_LL').value);
+  const SDL = parseFloat(document.getElementById('s_SDL').value);
+  const support = document.getElementById('s_support').value;
+
+  const sDepthErr = validateDepth(t, cover, 'ความหนาพื้น t');
+  if(sDepthErr && (t-cover)<=0){
+    document.getElementById('slabResults').innerHTML =
+      `<div class="warn-banner" style="margin:0;">❌ ${sDepthErr}</div>
+       <p class="note">ตัวอย่าง: พื้นหนา 12 ซม. ให้กรอก t = 12 (ไม่ใช่ 0.12)</p>`;
+    return;
+  }
+
+  const r = slabWSD(fc,fyfs,t,cover,L,LL,SDL,support);
+  r.barSize = document.getElementById('s_barSize').value;
+  r.barSpacing = parseFloat(document.getElementById('s_barSpacing').value)||0;
+  r.As_provided = rebarArea(r.barSize)*(100/r.barSpacing);
+  r.barSteelOK = r.As_provided >= r.As_final;
+  r.spacingSuggest = (rebarArea(r.barSize)*100/r.As_final);
+  lastResult.slab = r;
+
+  // push reaction load (per meter run of supporting beam) into chain
+  const reactionPerM = r.w*1000*L/2; // kg/m: w(t/m2)*1000 -> kg/m2, ×L/2 tributary half-span onto beam
+  chain.slab = { wArea: r.w*1000, reactionPerM };
+  renderChainStatus();
+
+
+  const html = `
+  ${sDepthErr ? `<div class="warn-banner" style="margin-bottom:12px;">${sDepthErr}</div>` : ''}
+  <div class="res-block">
+    <div class="res-block-title">น้ำหนักบรรทุก / Loads (ต่อ ตร.ม.)</div>
+    <div class="res-row"><span class="k">น้ำหนักตัวเอง (self-weight)</span><span class="v">${fmt(r.selfWeight)} kg/m²</span></div>
+    <div class="res-row"><span class="k">น้ำหนักบรรทุกรวม w</span><span class="v">${fmt(r.w*1000)} kg/m² (${fmt(r.w)} t/m²)</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">โมเมนต์ & แรงเฉือนออกแบบ (ต่อความกว้าง 1.00 m)</div>
+    <div class="res-row"><span class="k">โมเมนต์ดัด M = ${r.support==='simple'?'wL²/8':'wL²/10'}</span><span class="v">${fmt(r.M_tm)} t·m/m</span></div>
+    <div class="res-row"><span class="k">แรงเฉือน V</span><span class="v">${fmt(r.V_t)} ton/m</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">เหล็กเสริมรับแรงดัด / Flexural Steel</div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กต้องการ As,req</span><span class="v">${fmt(r.As_req)} cm²/m</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กขั้นต่ำ (temp & shrinkage)</span><span class="v">${fmt(r.As_min)} cm²/m</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กที่ใช้จริง As (ใช้)</span><span class="v">${fmt(r.As_final)} cm²/m</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">เหล็กเสริมหลักที่เลือกใช้ / Main Bars ${statusTag(r.barSteelOK)}</div>
+    <div class="res-row"><span class="k">เลือกใช้</span><span class="v">${r.barSize} @ ${fmt(r.barSpacing,0)} cm</span></div>
+    <div class="res-row"><span class="k">As,provided</span><span class="v">${fmt(r.As_provided)} cm²/m</span></div>
+    <div class="res-row"><span class="k">As,req (ขั้นต่ำ)</span><span class="v">${fmt(r.As_final)} cm²/m</span></div>
+    <div class="res-row"><span class="k">ระยะเรียงสูงสุดที่ใช้ได้ (${r.barSize})</span><span class="v">${fmt(r.spacingSuggest,1)} cm</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">แรงเฉือน / Shear ${statusTag(r.shearOK)}</div>
+    <div class="res-row"><span class="k">Vc (คอนกรีตรับได้)</span><span class="v">${fmt(r.Vc_kg/1000)} ton/m</span></div>
+    <div class="res-row"><span class="k">V (ออกแบบ)</span><span class="v">${fmt(r.V_kg/1000)} ton/m</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">ความลึกต่อช่วงพาด (Deflection check, L/d) ${statusTag(r.deflOK)}</div>
+    <div class="res-row"><span class="k">L/d ที่คำนวณได้ / ค่าจำกัด</span><span class="v">${fmt(r.Ld,1)} / ${r.LdLimit}</span></div>
+  </div>
+  `;
+  document.getElementById('slabResults').innerHTML = html;
+  addToSlabBOM(r);
+}
+
+/* ============================================================
+   FOOTING — isolated square/rect footing, WSD
+   ============================================================ */
+function footingWSD(fc, fyfs, B, L, t, colSize, cover, P_t, qa){
+  const fy=fyfs[0], fs=fyfs[1];
+  const d = t - cover;
+  const Afoot = B*L; // m2
+  const selfWeight_t = (t/100)*2.4*Afoot; // ton, concrete 2.4 t/m3 (footing weight approx, soil surcharge ignored for brevity)
+  const P_total = P_t + selfWeight_t;
+  const q_actual = P_total/Afoot; // t/m2
+  const bearingOK = q_actual<=qa;
+
+  // one-way (beam) shear at d from face of column, critical section
+  const colSize_m = colSize/100;
+  const cantilever = (L - colSize_m)/2; // m, assume square footing & column centered, check along L direction
+  const x_shear = cantilever - d/100; // m from critical section to edge
+  let Vu_oneway = 0;
+  if(x_shear>0){
+    Vu_oneway = q_actual*B*x_shear; // ton, shear force on strip width B
+  }
+  const Vc_oneway = 0.29*Math.sqrt(fc)*(B*100)*d/1000; // ton
+  const onewayOK = Vu_oneway<=Vc_oneway;
+
+  // two-way (punching) shear at d/2 from column face
+  const bo = 4*(colSize + d); // cm, perimeter of critical section (square column)
+  const Vu_twoway = P_total - q_actual*Math.pow((colSize+d)/100,2); // ton, net punching force
+  const Vc_twoway = 1.06*Math.sqrt(fc)*bo*d/1000; // ton
+  const twowayOK = Vu_twoway<=Vc_twoway;
+
+  // flexure - cantilever moment at face of column
+  const M_tm = q_actual*B*Math.pow(cantilever,2)/2; // t-m per footing width B, cantilever strip
+
+  const fc_allow=0.45*fc;
+  const n=n_ratio(fc);
+  const k=1/(1+fs/(n*fc_allow));
+  const j=1-k/3;
+  const R=0.5*fc_allow*k*j;
+  const M_kgcm = M_tm*100000;
+  const As_req = M_kgcm/(fs*j*d); // cm2 for width B(m)*100 cm
+  const rho_min = fy>=4000?0.0018:0.002;
+  const As_min = rho_min*(B*100)*t;
+  const As_final = Math.max(As_req, As_min);
+
+  return {fc,fy,fs,B,L,t,d,colSize,Afoot,selfWeight_t,P_total,q_actual,qa,bearingOK,
+    cantilever,Vu_oneway,Vc_oneway,onewayOK,bo,Vu_twoway,Vc_twoway,twowayOK,M_tm,As_req,As_min,As_final};
+}
+
+function calcFooting(){
+  const fc = parseFloat(document.getElementById('f_fc').value);
+  const fyfs = document.getElementById('f_steel').value.split('|').map(Number);
+  const B = parseFloat(document.getElementById('f_B').value);
+  const L = parseFloat(document.getElementById('f_L').value);
+  const t = parseFloat(document.getElementById('f_t').value);
+  const colSize = parseFloat(document.getElementById('f_col').value);
+  const cover = parseFloat(document.getElementById('f_cover').value);
+  const P = parseFloat(document.getElementById('f_P').value);
+  const qa = parseFloat(document.getElementById('f_qa').value);
+
+  const depthErr = validateDepth(t, cover, 'ความหนาฐาน t');
+  if(depthErr && (t-cover)<=0){
+    document.getElementById('footingResults').innerHTML =
+      `<div class="warn-banner" style="margin:0;">❌ ${depthErr}</div>
+       <p class="note">ตัวอย่าง: ฐานรากหนา 50 ซม. ให้กรอก t = 50 (ไม่ใช่ 0.5) และระยะหุ้ม d' ปกติ ≈ 7.5 ซม.</p>`;
+    return;
+  }
+
+  const r = footingWSD(fc,fyfs,B,L,t,colSize,cover,P,qa);
+  r.barSize = document.getElementById('f_barSize').value;
+  r.barSpacing = parseFloat(document.getElementById('f_barSpacing').value)||0;
+  r.As_provided = rebarArea(r.barSize)*(100/r.barSpacing);
+  r.barSteelOK = r.As_provided >= (r.As_final/(r.B*100))*100; // As_final is for full width B(m); compare per-meter basis
+  r.As_final_perM = r.As_final/r.B;
+  lastResult.footing = r;
+
+  const html = `
+  ${depthErr ? `<div class="warn-banner" style="margin-bottom:12px;">${depthErr}</div>` : ''}
+  <div class="res-block">
+    <div class="res-block-title">แรงกดบนดิน / Soil Bearing Pressure ${statusTag(r.bearingOK)}</div>
+    <div class="res-row"><span class="k">น้ำหนักตัวฐานราก (ประมาณ)</span><span class="v">${fmt(r.selfWeight_t)} ton</span></div>
+    <div class="res-row"><span class="k">น้ำหนักรวมที่ฐานราก P,total</span><span class="v">${fmt(r.P_total)} ton</span></div>
+    <div class="res-row"><span class="k">แรงกดบนดินจริง q</span><span class="v">${fmt(r.q_actual)} t/m²</span></div>
+    <div class="res-row"><span class="k">กำลังรับน้ำหนักดินที่ยอมให้ qa</span><span class="v">${fmt(r.qa)} t/m²</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">แรงเฉือนทางเดียว / One-way (Beam) Shear ${statusTag(r.onewayOK)}</div>
+    <div class="res-row"><span class="k">ระยะยื่นถึงหน้าตัดวิกฤต (จาก d)</span><span class="v">${fmt(r.cantilever - r.d/100)} m</span></div>
+    <div class="res-row"><span class="k">Vu (one-way)</span><span class="v">${fmt(r.Vu_oneway)} ton</span></div>
+    <div class="res-row"><span class="k">Vc (คอนกรีตรับได้)</span><span class="v">${fmt(r.Vc_oneway)} ton</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">แรงเฉือนเจาะทะลุ / Two-way (Punching) Shear ${statusTag(r.twowayOK)}</div>
+    <div class="res-row"><span class="k">เส้นรอบรูปวิกฤต bo (ที่ d/2 จากเสา)</span><span class="v">${fmt(r.bo)} cm</span></div>
+    <div class="res-row"><span class="k">Vu (punching)</span><span class="v">${fmt(r.Vu_twoway)} ton</span></div>
+    <div class="res-row"><span class="k">Vc (punching capacity, 1.06√fc'·bo·d)</span><span class="v">${fmt(r.Vc_twoway)} ton</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">เหล็กเสริมรับแรงดัด / Flexural Steel (cantilever at column face)</div>
+    <div class="res-row"><span class="k">โมเมนต์ดัด M (ที่หน้าเสา)</span><span class="v">${fmt(r.M_tm)} t·m</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กต้องการ As,req</span><span class="v">${fmt(r.As_req)} cm²</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กขั้นต่ำ As,min</span><span class="v">${fmt(r.As_min)} cm²</span></div>
+    <div class="res-row"><span class="k">พื้นที่เหล็กที่ใช้จริง As (ใช้)</span><span class="v">${fmt(r.As_final)} cm²</span></div>
+  </div>
+
+  <div class="res-block">
+    <div class="res-block-title">เหล็กเสริมหลักที่เลือกใช้ / Main Bars (ทั้งสองทาง) ${statusTag(r.barSteelOK)}</div>
+    <div class="res-row"><span class="k">เลือกใช้</span><span class="v">${r.barSize} @ ${fmt(r.barSpacing,0)} cm</span></div>
+    <div class="res-row"><span class="k">As,provided</span><span class="v">${fmt(r.As_provided)} cm²/m</span></div>
+    <div class="res-row"><span class="k">As,req (เทียบต่อเมตร)</span><span class="v">${fmt(r.As_final_perM)} cm²/m</span></div>
+  </div>
+  `;
+  document.getElementById('footingResults').innerHTML = html;
+  addToFootingBOM(r);
+}
+
+/* ============================================================
+   PRINT SHEET GENERATOR
+   ============================================================ */
+function printSheetFor(type){
+  if(!lastResult[type]){
+    alert('กรุณากดคำนวณก่อนพิมพ์เอกสาร / Please calculate first.');
+    return;
+  }
+  const proj = document.getElementById('projName').value || '-';
+  const eng = document.getElementById('projEng').value || '-';
+  const chk = document.getElementById('projChk').value || '-';
+  const date = document.getElementById('projDate').value || '-';
+  const titleMap = {beam:'คาน (BEAM) — WSD', column:'เสา (COLUMN) — WSD', slab:'พื้น (ONE-WAY SLAB) — WSD', footing:'ฐานราก (ISOLATED FOOTING) — WSD'};
+
+  let body = '';
+  const r = lastResult[type];
+
+  if(type==='beam' && r.matType==='steel'){
+    body = `
+    <div class="ps-h">1. หน้าตัดเหล็กรูปพรรณ</div>
+    <div class="ps-row"><span>รูปแบบ</span><span>${r.label}</span></div>
+    <div class="ps-row"><span>Fy</span><span>${r.Fy} ksc</span></div>
+    <div class="ps-row"><span>A / I / S</span><span>${fmt(r.A)} cm² / ${fmt(r.I,0)} cm⁴ / ${fmt(r.S)} cm³</span></div>
+    <div class="ps-h">2. การดัด (ASD)</div>
+    <div class="ps-formula">Fb = 0.66·Fy = ${fmt(r.Fb)} ksc &nbsp; fb = M/S</div>
+    <div class="ps-row"><span>fb / Fb</span><span>${fmt(r.fb)} / ${fmt(r.Fb)} ksc — ${r.bendOK?'OK':'NG ⚠'}</span></div>
+    <div class="ps-h">3. แรงเฉือน (ASD)</div>
+    <div class="ps-row"><span>fv / Fv</span><span>${fmt(r.fv)} / ${fmt(r.Fv)} ksc — ${r.shearOK?'OK':'NG ⚠'}</span></div>
+    `;
+  } else if(type==='column' && r.matType==='steel'){
+    body = `
+    <div class="ps-h">1. หน้าตัดเหล็กรูปพรรณ</div>
+    <div class="ps-row"><span>รูปแบบ</span><span>${r.label}</span></div>
+    <div class="ps-row"><span>Fy</span><span>${r.Fy} ksc</span></div>
+    <div class="ps-row"><span>A / r / S</span><span>${fmt(r.A)} cm² / ${fmt(r.r)} cm / ${fmt(r.S)} cm³</span></div>
+    <div class="ps-h">2. ความชะลูด</div>
+    <div class="ps-row"><span>KL/r / Cc</span><span>${fmt(r.slender,1)} / ${fmt(r.Cc,1)}</span></div>
+    <div class="ps-row"><span>Fa (allowable)</span><span>${fmt(r.Fa)} ksc</span></div>
+    <div class="ps-h">3. แรงอัด + ดัด (ASD Interaction)</div>
+    <div class="ps-formula">fa/Fa + fb/Fb ≤ 1.0</div>
+    <div class="ps-row"><span>fa / fb</span><span>${fmt(r.fa)} / ${fmt(r.fb)} ksc</span></div>
+    <div class="ps-row"><span>Interaction</span><span>${fmt(r.interaction,3)} — ${r.ok?'OK':'NG ⚠'}</span></div>
+    `;
+  } else if(type==='beam'){
+    body = `
+    <div class="ps-h">1. ข้อมูลหน้าตัดและวัสดุ</div>
+    <div class="ps-row"><span>fc' / fy / fs</span><span>${r.fc} / ${r.fy} / ${r.fs} ksc</span></div>
+    <div class="ps-row"><span>b × h, d</span><span>${r.b} × ${r.h} cm, d=${fmt(r.d)} cm</span></div>
+    <div class="ps-h">2. ค่าสัมประสิทธิ์ WSD</div>
+    <div class="ps-formula">k = 1/(1+fs/(n·fc)) = ${fmt(r.k,3)} &nbsp; j = 1−k/3 = ${fmt(r.j,3)} &nbsp; R = 0.5·fc·k·j = ${fmt(r.R)} ksc</div>
+    <div class="ps-h">3. โมเมนต์ดัด</div>
+    <div class="ps-row"><span>Mr (balanced)</span><span>${fmt(r.Mr_balanced)} t·m</span></div>
+    <div class="ps-row"><span>M (design)</span><span>${fmt(r.M_tm)} t·m</span></div>
+    <div class="ps-row"><span>As,req / As,min / As (ใช้)</span><span>${fmt(r.As_req)} / ${fmt(r.As_min)} / ${fmt(r.As_final)} cm²</span></div>
+    <div class="ps-row"><span>ρ / ρ-balanced</span><span>${fmt(r.rho_req,4)} / ${fmt(r.rho_bal,4)} — ${r.overReinforced?'OVER-REINFORCED ⚠':'OK'}</span></div>
+    <div class="ps-row"><span>เหล็กเมนที่ใช้ / As,provided</span><span>${r.barCount}-${r.barSize} / ${fmt(r.As_provided)} cm² — ${r.barSteelOK?'OK':'NG ⚠'}</span></div>
+    <div class="ps-h">4. แรงเฉือน</div>
+    <div class="ps-row"><span>Vc / V</span><span>${fmt(r.Vc_kg/1000)} / ${fmt(r.V_kg/1000)} ton</span></div>
+    <div class="ps-row"><span>ต้องการเหล็กปลอกเพิ่ม</span><span>${r.needStirrup?'YES':'NO'} — s = ${fmt(r.stirrupSpacing)} cm</span></div>
+    `;
+  } else if(type==='column'){
+    body = `
+    <div class="ps-h">1. ข้อมูลหน้าตัดและวัสดุ</div>
+    <div class="ps-row"><span>fc' / fy</span><span>${r.fc} / ${r.fy} ksc</span></div>
+    <div class="ps-row"><span>b × h, Ag, Ast</span><span>${r.b} × ${r.h} cm, Ag=${fmt(r.Ag)} cm², Ast=${fmt(r.Ast)} cm²</span></div>
+    <div class="ps-row"><span>เหล็กเมนที่ใช้</span><span>${r.barCount}-${r.barSize}</span></div>
+    <div class="ps-h">2. กำลังรับแรงตามแนวแกน (Concentric)</div>
+    <div class="ps-formula">Pa = 0.25·fc'·(Ag−Ast) + Fs·Ast</div>
+    <div class="ps-row"><span>Pa (allowable) / P (design)</span><span>${fmt(r.Pa_axial)} / ${fmt(r.P_t)} ton</span></div>
+    <div class="ps-h">3. แรงตามแนวแกน + โมเมนต์ดัด (ประมาณ, uncracked transformed section)</div>
+    <div class="ps-row"><span>fc (axial)</span><span>${fmt(r.fc_axial)} ksc</span></div>
+    <div class="ps-row"><span>fc (bending) ±</span><span>${fmt(r.fc_bending)} ksc</span></div>
+    <div class="ps-row"><span>fc,max / fc,allow</span><span>${fmt(r.fc_max)} / ${fmt(r.fc_allow)} ksc — ${r.stressOK?'OK':'EXCEEDS ⚠'}</span></div>
+    `;
+  } else if(type==='slab'){
+    body = `
+    <div class="ps-h">1. ข้อมูลหน้าตัดและวัสดุ (ต่อความกว้าง 1.00 m)</div>
+    <div class="ps-row"><span>fc' / fy / fs</span><span>${r.fc} / ${r.fy} / ${r.fs} ksc</span></div>
+    <div class="ps-row"><span>t, d, L, support</span><span>t=${r.t} cm, d=${fmt(r.d)} cm, L=${r.L} m, ${r.support}</span></div>
+    <div class="ps-h">2. น้ำหนักบรรทุก</div>
+    <div class="ps-row"><span>self-weight / LL / SDL</span><span>${fmt(r.selfWeight)} / ${r.LL} / ${r.SDL} kg/m²</span></div>
+    <div class="ps-row"><span>w (total)</span><span>${fmt(r.w*1000)} kg/m²</span></div>
+    <div class="ps-h">3. โมเมนต์ & เหล็กเสริม</div>
+    <div class="ps-row"><span>M (design)</span><span>${fmt(r.M_tm)} t·m/m</span></div>
+    <div class="ps-row"><span>As,req / As,min / As (ใช้)</span><span>${fmt(r.As_req)} / ${fmt(r.As_min)} / ${fmt(r.As_final)} cm²/m</span></div>
+    <div class="ps-row"><span>เหล็กเมนที่ใช้ / As,provided</span><span>${r.barSize} @ ${fmt(r.barSpacing,0)} cm / ${fmt(r.As_provided)} cm²/m — ${r.barSteelOK?'OK':'NG ⚠'}</span></div>
+    <div class="ps-h">4. แรงเฉือน & การแอ่นตัว</div>
+    <div class="ps-row"><span>Vc / V</span><span>${fmt(r.Vc_kg/1000)} / ${fmt(r.V_kg/1000)} ton/m — ${r.shearOK?'OK':'NG ⚠'}</span></div>
+    <div class="ps-row"><span>L/d / limit</span><span>${fmt(r.Ld,1)} / ${r.LdLimit} — ${r.deflOK?'OK':'NG ⚠'}</span></div>
+    `;
+  } else if(type==='footing'){
+    body = `
+    <div class="ps-h">1. ข้อมูลหน้าตัดและวัสดุ</div>
+    <div class="ps-row"><span>fc' / fy / fs</span><span>${r.fc} / ${r.fy} / ${r.fs} ksc</span></div>
+    <div class="ps-row"><span>B × L, t, col size</span><span>${r.B} × ${r.L} m, t=${r.t} cm, col=${r.colSize} cm</span></div>
+    <div class="ps-h">2. แรงกดบนดิน</div>
+    <div class="ps-row"><span>P,total / Afoot</span><span>${fmt(r.P_total)} ton / ${fmt(r.Afoot)} m²</span></div>
+    <div class="ps-row"><span>q (actual) / qa (allow)</span><span>${fmt(r.q_actual)} / ${r.qa} t/m² — ${r.bearingOK?'OK':'NG ⚠'}</span></div>
+    <div class="ps-h">3. แรงเฉือน</div>
+    <div class="ps-row"><span>One-way: Vu / Vc</span><span>${fmt(r.Vu_oneway)} / ${fmt(r.Vc_oneway)} ton — ${r.onewayOK?'OK':'NG ⚠'}</span></div>
+    <div class="ps-row"><span>Punching: Vu / Vc</span><span>${fmt(r.Vu_twoway)} / ${fmt(r.Vc_twoway)} ton — ${r.twowayOK?'OK':'NG ⚠'}</span></div>
+    <div class="ps-h">4. โมเมนต์ดัด & เหล็กเสริม</div>
+    <div class="ps-row"><span>M (at column face)</span><span>${fmt(r.M_tm)} t·m</span></div>
+    <div class="ps-row"><span>As,req / As,min / As (ใช้)</span><span>${fmt(r.As_req)} / ${fmt(r.As_min)} / ${fmt(r.As_final)} cm²</span></div>
+    <div class="ps-row"><span>เหล็กเมนที่ใช้ (ทั้งสองทาง) / As,provided</span><span>${r.barSize} @ ${fmt(r.barSpacing,0)} cm / ${fmt(r.As_provided)} cm²/m — ${r.barSteelOK?'OK':'NG ⚠'}</span></div>
+    `;
+  }
+
+  document.getElementById('printSheet').innerHTML = `
+  <div class="ps-page">
+    <div class="ps-titleblock">
+      <div class="ps-tb-cell"><div class="l">โครงการ / Project</div><div class="v">${proj}</div></div>
+      <div class="ps-tb-cell"><div class="l">คำนวณโดย</div><div class="v">${eng}</div></div>
+      <div class="ps-tb-cell"><div class="l">ตรวจสอบโดย</div><div class="v">${chk}</div></div>
+    </div>
+    <div class="ps-body">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">เอกสารคำนวณโครงสร้าง RC — ${titleMap[type]}</div>
+      <div style="font-size:11px;color:#555;margin-bottom:10px;">มาตรฐาน: มยผ.1103-61 / EIT — Working Stress Design (WSD) &nbsp;|&nbsp; วันที่: ${date}</div>
+      ${body}
+      <p style="font-size:10px;color:#666;margin-top:16px;">หมายเหตุ: เอกสารนี้เป็นการคำนวณขั้นต้น ต้องได้รับการตรวจสอบและลงนามรับรองโดยวิศวกรผู้ได้รับใบอนุญาต (กว.) ก่อนนำไปใช้งานจริง</p>
+    </div>
+    <div class="ps-foot">
+      <span>ลงชื่อผู้คำนวณ: ____________________</span>
+      <span>ลงชื่อผู้ตรวจสอบ: ____________________</span>
+      <span>หน้า 1/1</span>
+    </div>
+  </div>`;
+  window.print();
+}
+
+/* ===== PWA: service worker + install prompt ===== */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  const btn = document.getElementById('installBtn');
+  if(btn) btn.style.display = 'inline-block';
+});
+function installApp(){
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.finally(()=>{
+    deferredPrompt = null;
+    const btn = document.getElementById('installBtn');
+    if(btn) btn.style.display = 'none';
+  });
+}
+</script>
+</body>
+</html>
