@@ -1,5 +1,5 @@
 /* RC Structure Calculator — service worker (offline cache) */
-const CACHE = 'rc-calc-v1';
+const CACHE = 'rc-calc-v2';
 const ASSETS = [
   './',
   './index.html',
